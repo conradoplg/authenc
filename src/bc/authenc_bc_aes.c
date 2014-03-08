@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "authenc_util.h"
 #include "authenc_errors.h"
 
 /*============================================================================*/
@@ -187,13 +188,6 @@ static unsigned char mule[256] = {
 	0xd7, 0xd9, 0xcb, 0xc5, 0xef, 0xe1, 0xf3, 0xfd, 0xa7, 0xa9, 0xbb, 0xb5, 0x9f, 0x91, 0x83, 0x8d
 };
 
-static void memxor(unsigned char *c, unsigned char *a, unsigned char *b) {
-	int i;
-
-	for (i = 0; i < BC_AES_BLOCK_LEN; i++, a++, b++, c++) {
-		(*c) = (*a) ^ (*b);
-	}
-}
 
 /*============================================================================*/
 /* Public definitions                                                         */
@@ -241,7 +235,7 @@ void bc_aes_enc(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
 	int i, j;
 
 	//AddRoundKey
-	memxor(s, input, ctx->ekey);
+	authenc_xor(s, input, ctx->ekey, BC_AES_BLOCK_LEN);
 	for (i = 16; i < 10 * 16; i += 16) {
 		//SubBytes, ShiftRows, MixColumns
 		for (j = 0; j < 4; j++) {
@@ -255,7 +249,7 @@ void bc_aes_enc(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
 			t[4 * j + 3] = smul3[a] ^ sbox[b] ^ sbox[c] ^ smul2[d];
 		}
 		//AddRoundKey
-		memxor(s, t, ctx->ekey + i);
+		authenc_xor(s, t, ctx->ekey + i, BC_AES_BLOCK_LEN);
 	}
 	//SubBytes, ShiftRows
 	for (j = 0; j < 4; j++) {
@@ -265,7 +259,7 @@ void bc_aes_enc(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
 		t[4 * j + 3] = sbox[s[4 * ((j + 3) % 4) + 3]];
 	}
 	//AddRoundKey
-	memxor(output, t, ctx->ekey + i);
+	authenc_xor(output, t, ctx->ekey + i, BC_AES_BLOCK_LEN);
 }
 
 void bc_aes_dec(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
@@ -275,7 +269,7 @@ void bc_aes_dec(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
 	int i, j;
 
 	//AddRoundKey
-	memxor(s, input, ctx->ekey + 10 * 16);
+	authenc_xor(s, input, ctx->ekey + 10 * 16, BC_AES_BLOCK_LEN);
 	//InvShiftRows, InvSubBytes
 	for (j = 0; j < 4; j++) {
 		t[4 * j + 0] = isbox[s[4 * j]];
@@ -285,7 +279,7 @@ void bc_aes_dec(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
 	}
 	for (i = 9 * 16; i > 0; i -= 16) {
 		//AddRoundKey
-		memxor(s, t, ctx->ekey + i);
+		authenc_xor(s, t, ctx->ekey + i, BC_AES_BLOCK_LEN);
 		//InvMixColumns, InvShiftRows, InvSubBytes
 		for (j = 0; j < 4; j++) {
 			a = s[4 * j + 0];
@@ -299,5 +293,5 @@ void bc_aes_dec(bc_aes_ctx_t ctx, unsigned char *output, unsigned char *input) {
 		}
 	}
 	//AddRoundKey
-	memxor(output, t, ctx->ekey);
+	authenc_xor(output, t, ctx->ekey, BC_AES_BLOCK_LEN);
 }

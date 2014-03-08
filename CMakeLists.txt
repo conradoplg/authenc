@@ -13,3 +13,5 @@ enable_testing()
 
 add_executable(test_bc_aes test/test_bc_aes.c)
 target_link_libraries(test_bc_aes authenc)
+add_executable(test_ac_gcm test/test_ac_gcm.c)
+target_link_libraries(test_ac_gcm authenc)
