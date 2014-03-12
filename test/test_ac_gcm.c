@@ -51,5 +51,6 @@ int main(void) {
 	if (test_gcm() != AUTHENC_OK) {
 		return 1;
 	}
+	puts("OK!");
 	return 0;
 }

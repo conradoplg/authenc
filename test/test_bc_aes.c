@@ -41,6 +41,6 @@ int main(void) {
 	if (test_aes128() != AUTHENC_OK) {
 		return 1;
 	}
-
+	puts("OK!");
 	return 0;
 }
