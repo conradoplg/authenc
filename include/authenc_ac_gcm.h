@@ -133,8 +133,4 @@ errno_t ac_gcm_tag(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len);
  */
 int ac_gcm_check(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len);
 
-void ac_gcm_mul_low(dig_t *c, dig_t *a, dig_t *b);
-
-void ac_gcm_tab_low(dig_t *t, unsigned char *h);
-
 #endif /* AUTHENC_AC_H_ */

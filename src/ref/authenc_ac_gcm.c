@@ -12,6 +12,10 @@
 /* Private definitions                                                        */
 /*============================================================================*/
 
+void ac_gcm_mul_low(dig_t *c, dig_t *a, dig_t *b);
+
+void ac_gcm_tab_low(dig_t *t, unsigned char *h);
+
 #ifndef AC_GCM_REFLC
 /** Table used to reflect the bits inside a byte. */
 static const unsigned char byte_table[] = { 0x0, 0x80, 0x40, 0xc0, 0x20,
