@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 2.8) 
-project(AUTHENC C)
+project(AUTHENC C ASM)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -W -std=c99 -Werror")
 
 include_directories("include")
 
-file(GLOB_RECURSE LIB_SRCS "src/*.c")
+set(BACKEND "ref" CACHE STRING "Backend to use.")
 
+file(GLOB LIB_SRCS "src/*.c")
+file(GLOB_RECURSE BACKEND_SRCS "src/${BACKEND}/*.c" "src/${BACKEND}/*.S")
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/${BACKEND}/CMakeLists.txt")
+	add_subdirectory("src/${BACKEND}/")
+endif() 
+
+list(APPEND LIB_SRCS ${BACKEND_SRCS})
 add_library(authenc ${LIB_SRCS})
 
 enable_testing()
