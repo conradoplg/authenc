@@ -23,7 +23,7 @@
  */
 typedef struct {
 	authenc_align unsigned char iv[BC_AES_BLOCK_LEN];
-	authenc_align unsigned char ekey[11 * BC_AES_BLOCK_LEN];
+	authenc_align unsigned char ekey[12 * 128];
 	size_t key_len;
 } bc_aes_ctx_st;
 

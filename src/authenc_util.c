@@ -1,8 +1,7 @@
 #include "authenc_util.h"
 
 
-void authenc_xor(unsigned char *c, unsigned char *a, unsigned char *b,
-		size_t len) {
+void authenc_xor(unsigned char *c, const unsigned char *a, const unsigned char *b, size_t len) {
 	size_t i;
 
 	for (i = 0; i < len; i++, a++, b++, c++) {

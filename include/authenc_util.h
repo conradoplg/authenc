@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 
-void authenc_xor(unsigned char *c, unsigned char *a, unsigned char *b, size_t len);
+void authenc_xor(unsigned char *c, const unsigned char *a, const unsigned char *b, size_t len);
 
 void authenc_inc32(unsigned char *a, size_t len);
 
