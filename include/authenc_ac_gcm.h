@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "authenc_conf.h"
-#include "authenc_bc_aes.h"
+#include "authenc_sc_aesctr.h"
 
 /*============================================================================*/
 /* Constant definitions                                                       */
@@ -25,10 +25,11 @@
  */
 typedef struct {
 	authenc_align unsigned char last_y[AC_GCM_BLOCK_LEN];
+	authenc_align unsigned char ctr[AC_GCM_BLOCK_LEN];
 	uint64_t len_a;
 	uint64_t len_c;
 	dig_t table[32 * (AC_GCM_BLOCK_LEN / sizeof(dig_t) + 1)];
-	bc_aes_ctx_at bc_ctx;
+	sc_aesctr_ctx_at bc_ctx;
 } ac_gcm_ctx_st;
 
 /**
