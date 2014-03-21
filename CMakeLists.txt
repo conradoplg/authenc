@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8) 
 project(AUTHENC C ASM)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -W -std=c99 -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -W -std=c99 -Werror -D_POSIX_C_SOURCE=199309L")
 
 include_directories("include")
 
@@ -25,3 +25,9 @@ add_executable(test_sc_aesctr test/test_sc_aesctr.c)
 target_link_libraries(test_sc_aesctr authenc)
 add_executable(test_ac_gcm test/test_ac_gcm.c)
 target_link_libraries(test_ac_gcm authenc)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bench/authenc_bench.c")
+	add_executable(bench_ac_gcm bench/bench_ac_gcm.c bench/authenc_bench.c)
+	target_link_libraries(bench_ac_gcm authenc rt)
+endif()
+
