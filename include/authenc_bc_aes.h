@@ -53,7 +53,7 @@ typedef bc_aes_ctx_st bc_aes_ctx_at[1];
  * @return					- AUTHENC_OK if successful
  * 							- AUTHENC_INVALID_PARAMETER if key length is not supported.
  */
-errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, unsigned char *key, size_t key_len);
+errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t key_len);
 
 /**
  * Sets the decryption key.
@@ -66,7 +66,7 @@ errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, unsigned char *key, size_t key_len);
  * @return					- AUTHENC_OK if successful
  * 							- AUTHENC_INVALID_PARAMETER if key length is not supported
  */
-errno_t bc_aes_dec_key(bc_aes_ctx_t ctx, unsigned char *key, size_t key_len);
+errno_t bc_aes_dec_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t key_len);
 
 /**
  * Encrypts a block.

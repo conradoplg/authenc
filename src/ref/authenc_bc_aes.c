@@ -193,7 +193,7 @@ static unsigned char mule[256] = {
 /* Public definitions                                                         */
 /*============================================================================*/
 
-errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, unsigned char *key, size_t len) {
+errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t len) {
 	unsigned char rcon = 1;
 	unsigned char t[4];
 
@@ -224,7 +224,7 @@ errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, unsigned char *key, size_t len) {
 	return AUTHENC_OK;
 }
 
-errno_t bc_aes_dec_key(bc_aes_ctx_t ctx, unsigned char *key, size_t len) {
+errno_t bc_aes_dec_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t len) {
 	return bc_aes_enc_key(ctx, key, len);
 }
 

@@ -20,7 +20,7 @@ static const unsigned int constants[8] = { 0x00030201, 0x05040706, 0x02010003,
 		0x07060504, 0x00000000, 0x00000000, 0x00000000, 0x00000001 };
 
 
-errno_t sc_aesctr_key(sc_aesctr_ctx_t ctx, unsigned char *key, size_t key_len) {
+errno_t sc_aesctr_key(sc_aesctr_ctx_t ctx, const unsigned char *key, size_t key_len) {
 	unsigned char *ekey;
 	if (key_len != SC_AES128CTR_KEY_LEN) {
 		return AUTHENC_ERR_INVALID_PARAMETER;

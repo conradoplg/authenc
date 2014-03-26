@@ -39,7 +39,7 @@ typedef sc_aesctr_ctx_st sc_aesctr_ctx_at[1];
  * @param[in] key			- the key.
  * @param[in] key_len		- the length of the key in bytes.
  */
-errno_t sc_aesctr_key(sc_aesctr_ctx_t ctx, unsigned char *key, size_t key_len);
+errno_t sc_aesctr_key(sc_aesctr_ctx_t ctx, const unsigned char *key, size_t key_len);
 
 errno_t sc_aesctr_enc(sc_aesctr_ctx_t ctx, unsigned char *output,
 		const unsigned char *input, size_t input_len,

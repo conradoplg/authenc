@@ -16,7 +16,7 @@ void ac_gcm_mul_low(dig_t *c, dig_t *a, dig_t *b);
 
 void ac_gcm_tab_low(dig_t *t, unsigned char *h);
 
-void ac_gcm_convert_low(unsigned char *c, unsigned char *a);
+void ac_gcm_convert_low(unsigned char *c, const unsigned char *a);
 
 /**
  * Convert byte stream to GCM representation.
@@ -48,7 +48,7 @@ static void ghash_input(ac_gcm_ctx_t ctx, unsigned char *input) {
 /* Public definitions                                                         */
 /*============================================================================*/
 
-errno_t ac_gcm_key(ac_gcm_ctx_t ctx, unsigned char *key, size_t key_len) {
+errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len) {
 	authenc_align unsigned char h[AC_GCM_BLOCK_LEN];
 	authenc_align unsigned char zero[AC_GCM_BLOCK_LEN] = { 0 };
 	errno_t err = AUTHENC_OK;
@@ -68,8 +68,8 @@ errno_t ac_gcm_key(ac_gcm_ctx_t ctx, unsigned char *key, size_t key_len) {
 	return AUTHENC_OK;
 }
 
-errno_t ac_gcm_init(ac_gcm_ctx_t ctx, unsigned char *key, size_t key_len,
-		unsigned char *iv, size_t iv_len, size_t msg_len, size_t data_len) {
+errno_t ac_gcm_init(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len,
+		const unsigned char *iv, size_t iv_len, size_t msg_len, size_t data_len) {
 	if (key_len != AC_GCM_KEY_LEN || iv_len != AC_GCM_IV_LEN) {
 		return AUTHENC_ERR_INVALID_PARAMETER;
 	}
@@ -122,7 +122,7 @@ void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, unsigned char *input,
 	ctx->len_c += input_len;
 }
 
-void ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, unsigned char *input,
+void ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input,
 		size_t input_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
 
@@ -171,7 +171,7 @@ errno_t ac_gcm_tag(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len) {
 	return AUTHENC_OK;
 }
 
-errno_t ac_gcm_check(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len) {
+errno_t ac_gcm_check(ac_gcm_ctx_t ctx, const unsigned char *tag, size_t tag_len) {
 	unsigned char computed_tag[AC_GCM_TAG_LEN];
 
 	if (tag_len != AC_GCM_TAG_LEN) {

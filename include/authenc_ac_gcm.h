@@ -49,7 +49,7 @@ typedef ac_gcm_ctx_st ac_gcm_ctx_at[1];
  * @param[in] key			- the key.
  * @param[in] key_len		- the length of the key in bytes.
  */
-errno_t ac_gcm_key(ac_gcm_ctx_t ctx, unsigned char *key, size_t key_len);
+errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len);
 
 /**
  * Initializes authenticated encryption / decryption with an initialization
@@ -70,8 +70,8 @@ errno_t ac_gcm_key(ac_gcm_ctx_t ctx, unsigned char *key, size_t key_len);
  * @param[in] msg_len		- the length in bytes of the message to be processed.
  * @param[in] data_len		- the length in bytes of additional data to be processed.
  */
-errno_t ac_gcm_init(ac_gcm_ctx_t ctx, unsigned char *key, size_t key_len,
-		unsigned char *iv, size_t iv_len, size_t msg_len, size_t data_len);
+errno_t ac_gcm_init(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len,
+		const unsigned char *iv, size_t iv_len, size_t msg_len, size_t data_len);
 
 /**
  * Inputs additional data to be authenticated only.
@@ -96,7 +96,7 @@ void ac_gcm_data(ac_gcm_ctx_t ctx, unsigned char *data, size_t data_len);
  * @param[in] input			- hte plaintext to encrypt.
  * @param[in] input_len		- the length in bytes of the plaintext.
  */
-void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, unsigned char *input, size_t input_len);
+void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input, size_t input_len);
 
 /**
  * Decrypts ciphertext.
@@ -109,7 +109,7 @@ void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, unsigned char *input, s
  * @param[in] input			- hte ciphertext to decrypt.
  * @param[in] input_len		- the length in bytes of the ciphertext.
  */
-void ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, unsigned char *input, size_t input_len);
+void ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input, size_t input_len);
 
 /**
  * Computes the authentication tag.
@@ -132,6 +132,6 @@ errno_t ac_gcm_tag(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len);
  * @param[in] tag_len	- the length of the authentication tag received.
  * @return 1 if the tag is valid, 0 otherwise.
  */
-int ac_gcm_check(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len);
+int ac_gcm_check(ac_gcm_ctx_t ctx, const unsigned char *tag, size_t tag_len);
 
 #endif /* AUTHENC_AC_H_ */

@@ -5,7 +5,7 @@
 #include "authenc_util.h"
 #include "authenc_sc_aesctr.h"
 
-errno_t sc_aesctr_key(sc_aesctr_ctx_t ctx, unsigned char *key, size_t key_len) {
+errno_t sc_aesctr_key(sc_aesctr_ctx_t ctx, const unsigned char *key, size_t key_len) {
 	return bc_aes_enc_key(ctx->aes_ctx, key, key_len);
 }
 
