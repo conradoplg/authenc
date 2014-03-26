@@ -163,11 +163,11 @@ void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *in
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
 
 	if (input_len < AC_GCM_BLOCK_LEN) {
-		memset(t, 0, sizeof(t));
 		memcpy(t, input, input_len);
 		sc_aesctr_enc(ctx->bc_ctx, t, t, AC_GCM_BLOCK_LEN, ctx->ctr, AC_GCM_BLOCK_LEN);
 		authenc_inc32(ctx->ctr, AC_GCM_BLOCK_LEN);
 		memcpy(output, t, input_len);
+		memset(t + input_len, 0, sizeof(t) - input_len);
 		convert(t, t);
 		authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
 	} else {
