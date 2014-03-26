@@ -196,6 +196,7 @@ static unsigned char mule[256] = {
 errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t len) {
 	unsigned char rcon = 1;
 	unsigned char t[4];
+	size_t a, j;
 
 	switch (len) {
 	case 16:
@@ -206,13 +207,13 @@ errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t len) {
 
 	//KeyExpansion
 	memcpy(ctx->ekey, key, BC_AES128_KEY_LEN);
-	for (size_t a = 16; a < 11 * 16; ) {
+	for (a = 16; a < 11 * 16; ) {
 		t[0] = sbox[ctx->ekey[a - 3]] ^ rcon;
 		t[1] = sbox[ctx->ekey[a - 2]];
 		t[2] = sbox[ctx->ekey[a - 1]];
 		t[3] = sbox[ctx->ekey[a - 4]];
 		rcon = (rcon << 1) ^ ((rcon >> 7) * 0x11b);
-		for (int j = 0; j < 4; j++) {
+		for (j = 0; j < 4; j++) {
 			t[0] ^= ctx->ekey[a - 16];
 			t[1] ^= ctx->ekey[a - 15];
 			t[2] ^= ctx->ekey[a - 14];

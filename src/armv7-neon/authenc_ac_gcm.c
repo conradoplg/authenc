@@ -97,7 +97,7 @@ void ac_gcm_data(ac_gcm_ctx_t ctx, unsigned char *data, size_t data_len) {
 	ctx->len_a += data_len;
 }
 
-void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, unsigned char *input,
+void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input,
 		size_t input_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
 

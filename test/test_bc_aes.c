@@ -22,8 +22,9 @@ static errno_t test_aes128(void) {
 	};
 	authenc_align unsigned char t[BC_AES_BLOCK_LEN];
 	bc_aes_ctx_at ctx;
+	size_t k;
 
-	for (size_t k = 0; k < (sizeof(keys) / sizeof(keys[0])); k++) {
+	for (k = 0; k < (sizeof(keys) / sizeof(keys[0])); k++) {
 		memset(t, 0, sizeof(t));
 		bc_aes_enc_key(ctx, keys[k], sizeof(keys[k]));
 		bc_aes_enc(ctx, t, plaintexts[k]);

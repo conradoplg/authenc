@@ -6,7 +6,7 @@
 
 #include "authenc_errors.h"
 
-void dump(const void *p, int len) { const unsigned char *a = p; for (int i = 0; i < len; i++) { printf("%02X", a[i]); } puts(""); }
+void dump(const void *p, int len) { const unsigned char *a = p; int i; for (i = 0; i < len; i++) { printf("%02X", a[i]); } puts(""); }
 int crypto_stream_xor(
         unsigned char *out,
         const unsigned char *in,
@@ -31,8 +31,9 @@ static errno_t test_aes128ctr(void) {
 	authenc_align unsigned char t[BC_AES_BLOCK_LEN];
 	authenc_align unsigned char zero[BC_AES_BLOCK_LEN] = {0};
 	sc_aesctr_ctx_at ctx;
+	size_t k;
 
-	for (size_t k = 0; k < (sizeof(keys) / sizeof(keys[0])); k++) {
+	for (k = 0; k < (sizeof(keys) / sizeof(keys[0])); k++) {
 		memset(t, 0, sizeof(t));
 		sc_aesctr_key(ctx, keys[k], sizeof(keys[k]));
 		sc_aesctr_enc(ctx, t, zero, sizeof(zero), plaintexts[k], sizeof(plaintexts[k]));

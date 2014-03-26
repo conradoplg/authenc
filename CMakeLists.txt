@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8) 
 project(AUTHENC C ASM)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -W -std=c99 -Werror -D_POSIX_C_SOURCE=199309L")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -W -Werror -D_POSIX_C_SOURCE=199309L")
 
 include_directories("include")
 
