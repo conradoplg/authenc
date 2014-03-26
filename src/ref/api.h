@@ -1,0 +1,4 @@
+#define crypto_secretbox_aes128gcm_ref_KEYBYTES 16
+#define crypto_secretbox_aes128gcm_ref_NONCEBYTES 12
+#define crypto_secretbox_aes128gcm_ref_ZEROBYTES 16
+#define crypto_secretbox_aes128gcm_ref_BOXZEROBYTES 0
