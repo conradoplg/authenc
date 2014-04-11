@@ -42,6 +42,10 @@ typedef ac_gcm_ctx_st *ac_gcm_ctx_t;
  */
 typedef ac_gcm_ctx_st ac_gcm_ctx_at[1];
 
+/*============================================================================*/
+/* Function prototypes                                                        */
+/*============================================================================*/
+
 /**
  * Sets the authenticated encryption / decryption key.
  *
