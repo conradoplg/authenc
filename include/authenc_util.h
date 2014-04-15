@@ -7,7 +7,7 @@
 
 void authenc_xor(unsigned char *c, const unsigned char *a, const unsigned char *b, size_t len);
 
-void authenc_inc32(unsigned char *a, size_t len);
+void authenc_inc32(unsigned char *a, size_t val, size_t len);
 
 void authenc_read32(uint32_t *c, const unsigned char *a);
 

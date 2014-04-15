@@ -9,7 +9,7 @@ void authenc_xor(unsigned char *c, const unsigned char *a, const unsigned char *
 	}
 }
 
-void authenc_inc32(unsigned char *a, size_t len) {
+void authenc_inc32(unsigned char *a, size_t val, size_t len) {
 	uint32_t d;
 
 	if (len < sizeof(uint32_t)) {
@@ -17,7 +17,7 @@ void authenc_inc32(unsigned char *a, size_t len) {
 	}
 
 	authenc_read32(&d, a + (len - sizeof(uint32_t)));
-	d += 1;
+	d += val;
 	authenc_write32(a + (len - sizeof(uint32_t)), d);
 }
 

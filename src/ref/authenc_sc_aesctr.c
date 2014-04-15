@@ -24,7 +24,7 @@ errno_t sc_aesctr_enc(sc_aesctr_ctx_t ctx, unsigned char *output,
 
 	while (input_len) {
 		bc_aes_enc(ctx->aes_ctx, t, ctr);
-		authenc_inc32(ctr, sizeof(ctr));
+		authenc_inc32(ctr, 1, sizeof(ctr));
 		if (input_len < SC_AESCTR_BLOCK_LEN) {
 			authenc_xor(output, input, t, input_len);
 			input_len = 0;
