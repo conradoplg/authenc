@@ -11,7 +11,6 @@
 /* Constant definitions                                                       */
 /*============================================================================*/
 
-#define AC_GCM_KEY_LEN 16
 #define AC_GCM_TAG_LEN 16
 #define AC_GCM_BLOCK_LEN BC_AES_BLOCK_LEN
 #define AC_GCM_IV_LEN 12
@@ -28,7 +27,7 @@ typedef struct {
 	authenc_align unsigned char ctr[AC_GCM_BLOCK_LEN];
 	uint64_t len_a;
 	uint64_t len_c;
-	dig_t table[32 * (AC_GCM_BLOCK_LEN / sizeof(dig_t) + 1)];
+	authenc_align dig_t table[32 * (AC_GCM_BLOCK_LEN / sizeof(dig_t) + 1)];
 	sc_aesctr_ctx_at bc_ctx;
 } ac_gcm_ctx_st;
 

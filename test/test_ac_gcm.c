@@ -18,14 +18,12 @@ static void rand_bytes(void *p, size_t len) {
 
 static errno_t test_gcm(void) {
 	errno_t err = AUTHENC_OK;
-	unsigned char key[AC_GCM_KEY_LEN];
+	unsigned char key[SC_AES128CTR_KEY_LEN];
 	unsigned char iv[AC_GCM_IV_LEN];
 	authenc_align unsigned char msg[AC_GCM_BLOCK_LEN];
 	authenc_align unsigned char cipher[AC_GCM_BLOCK_LEN];
 	unsigned char tag[AC_GCM_TAG_LEN];
 	ac_gcm_ctx_at ctx;
-
-#if AC_GCM_KEY_LEN == 16
 
 	puts("GCM passes test vector 13?");
 	{
@@ -52,14 +50,13 @@ static errno_t test_gcm(void) {
 		assert(memcmp(cipher, cipher_ref, sizeof(cipher)) == 0);
 		assert(memcmp(tag, tag_ref, sizeof(tag)) == 0);
 	}
-#endif
 
 	return err;
 }
 
 static errno_t test_ac(void) {
 	errno_t err = AUTHENC_OK;
-	unsigned char key[AC_GCM_KEY_LEN];
+	unsigned char key[SC_AES128CTR_KEY_LEN];
 	unsigned char iv[AC_GCM_IV_LEN];
 	authenc_align unsigned char msg[AC_GCM_BLOCK_LEN];
 	authenc_align unsigned char cipher[sizeof(msg)];
@@ -127,7 +124,7 @@ int crypto_secretbox_open(unsigned char *m, const unsigned char *c,
 
 errno_t test_supercop(void) {
 	errno_t err = AUTHENC_OK;
-	unsigned char key[AC_GCM_KEY_LEN] = {0};
+	unsigned char key[SC_AES128CTR_KEY_LEN] = {0};
 	unsigned char iv[AC_GCM_IV_LEN] = {0};
 	authenc_align unsigned char msg[3 * AC_GCM_BLOCK_LEN + 1] = {0};
 	authenc_align unsigned char cipher[3 * AC_GCM_BLOCK_LEN + 1] = {0};

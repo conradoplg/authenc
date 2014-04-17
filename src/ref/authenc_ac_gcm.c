@@ -7,24 +7,46 @@
 #include "authenc_util.h"
 #include "authenc_errors.h"
 
+/*============================================================================*/
+/* Low-level function prototypes                                              */
+/*============================================================================*/
+
+/**
+ * Multiply two digit vectors in the GCM finite field.
+ * @param[out] c	- the product.
+ * @param[in] a		- the first operand.
+ * @param[in] b		- the second operand.
+ */
+void ac_gcm_mul_low(dig_t *c, dig_t *a, dig_t *b);
+
+/**
+ * Build a precomputation table to help the GCM multiplication.
+ *
+ * @param[out] t	- the table.
+ * @param[in] h		- the H value with AC_GCM_BLOCK_LEN bytes.
+ */
+void ac_gcm_tab_low(dig_t *t, unsigned char *h);
+
+/**
+ * Convert a byte vector to the internal representation.
+ *
+ * @param[out] c	- the converted vector with AC_GCM_BLOCK_LEN bytes.
+ * @param[in] a		- the input with AC_GCM_BLOCK_LEN bytes.
+ */
+void ac_gcm_convert_low(unsigned char *c, const unsigned char *a);
+
 
 /*============================================================================*/
 /* Private definitions                                                        */
 /*============================================================================*/
 
-void ac_gcm_mul_low(dig_t *c, dig_t *a, dig_t *b);
-
-void ac_gcm_tab_low(dig_t *t, unsigned char *h);
-
-void ac_gcm_convert_low(unsigned char *c, const unsigned char *a);
-
 /**
  * Inputs a block into the GHASH function.
  *
  * @param[in,out] ctx		- the context.
- * @param[in] input			- the input block.
+ * @param[in] input			- the input block with AC_GCM_BLOCK_LEN bytes.
  */
-static void ghash_input(ac_gcm_ctx_t ctx, unsigned char *input) {
+static void ghash_input(ac_gcm_ctx_t ctx, const unsigned char *input) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
 	//xor (field addition)
 	ac_gcm_convert_low(t, input);
@@ -59,7 +81,7 @@ errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len) {
 
 errno_t ac_gcm_init(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len,
 		const unsigned char *iv, size_t iv_len, size_t msg_len, size_t data_len) {
-	if (key_len != AC_GCM_KEY_LEN || iv_len != AC_GCM_IV_LEN) {
+	if (iv_len != AC_GCM_IV_LEN) {
 		return AUTHENC_ERR_INVALID_PARAMETER;
 	}
 	(void) key;
@@ -95,17 +117,13 @@ void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *in
 	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 	len = (input_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
 	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
-		ac_gcm_convert_low(t, output + i);
-		authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
-		ac_gcm_mul_low((dig_t *) ctx->last_y, (dig_t *) ctx->last_y, (dig_t *) ctx->table);
+		ghash_input(ctx, output + i);
 	}
 	len = input_len % AC_GCM_BLOCK_LEN;
 	if (len) {
 		memcpy(t, output + i, len);
 		memset(t + len, 0, sizeof(t) - len);
-		ac_gcm_convert_low(t, t);
-		authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
-		ac_gcm_mul_low((dig_t *) ctx->last_y, (dig_t *) ctx->last_y, (dig_t *) ctx->table);
+		ghash_input(ctx, t);
 	}
 
 	ctx->len_c += input_len;
@@ -120,17 +138,13 @@ void ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *in
 	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 	len = (input_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
 	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
-		ac_gcm_convert_low(t, input + i);
-		authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
-		ac_gcm_mul_low((dig_t *) ctx->last_y, (dig_t *) ctx->last_y, (dig_t *) ctx->table);
+		ghash_input(ctx, input + i);
 	}
 	len = input_len % AC_GCM_BLOCK_LEN;
 	if (len) {
 		memcpy(t, input + i, len);
 		memset(t + len, 0, sizeof(t) - len);
-		ac_gcm_convert_low(t, t);
-		authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
-		ac_gcm_mul_low((dig_t *) ctx->last_y, (dig_t *) ctx->last_y, (dig_t *) ctx->table);
+		ghash_input(ctx, t);
 	}
 
 	ctx->len_c += input_len;
