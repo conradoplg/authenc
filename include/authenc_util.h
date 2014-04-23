@@ -19,4 +19,6 @@ void authenc_write64(unsigned char *c, uint64_t a);
 
 int authenc_cmp_const(const void * a, const void *b, const size_t size);
 
+void authenc_memset(void *v, int c, size_t n);
+
 #endif /* AUTHENC_UTIL_H_ */

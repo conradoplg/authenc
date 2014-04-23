@@ -11,7 +11,7 @@ int crypto_secretbox(unsigned char *c, const unsigned char *m,
 {
 	errno_t err = AUTHENC_OK;
 	ac_gcm_ctx_at ctx;
-	unsigned long long i = 0;
+	size_t clen;
 
 	if (mlen < crypto_secretbox_aes128gcm_ref_ZEROBYTES) {
 		return -1;
@@ -20,20 +20,13 @@ int crypto_secretbox(unsigned char *c, const unsigned char *m,
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	err = ac_gcm_init(ctx, k, crypto_secretbox_aes128gcm_ref_KEYBYTES, n, crypto_secretbox_aes128gcm_ref_NONCEBYTES, 0, 0);
+	err = ac_gcm_enc(ctx, c, &clen, mlen,
+			m + crypto_secretbox_aes128gcm_ref_ZEROBYTES, mlen - crypto_secretbox_aes128gcm_ref_ZEROBYTES,
+			NULL, 0, n, crypto_secretbox_aes128gcm_ref_NONCEBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	for (i = crypto_secretbox_aes128gcm_ref_ZEROBYTES; i < (mlen - mlen % AC_GCM_BLOCK_LEN); i += AC_GCM_BLOCK_LEN) {
-		ac_gcm_enc(ctx, c + i, m + i, AC_GCM_BLOCK_LEN);
-	}
-	if (i < mlen) {
-		ac_gcm_enc(ctx, c + i, m + i, mlen - i);
-	}
-	err = ac_gcm_tag(ctx, c, crypto_secretbox_aes128gcm_ref_ZEROBYTES);
-	if (err != AUTHENC_OK) {
-		return -1;
-	}
+
 	return 0;
 }
 
@@ -43,6 +36,7 @@ int crypto_secretbox_open(unsigned char *m, const unsigned char *c,
 	errno_t err = AUTHENC_OK;
 	ac_gcm_ctx_at ctx;
 	unsigned long long i;
+	size_t mlen;
 
 	if (clen < crypto_secretbox_aes128gcm_ref_ZEROBYTES) {
 		return -1;
@@ -51,17 +45,8 @@ int crypto_secretbox_open(unsigned char *m, const unsigned char *c,
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	err = ac_gcm_init(ctx, k, crypto_secretbox_aes128gcm_ref_KEYBYTES, n, crypto_secretbox_aes128gcm_ref_NONCEBYTES, 0, 0);
-	if (err != AUTHENC_OK) {
-		return -1;
-	}
-	for (i = crypto_secretbox_aes128gcm_ref_ZEROBYTES; i < (clen - clen % AC_GCM_BLOCK_LEN); i += AC_GCM_BLOCK_LEN) {
-		ac_gcm_dec(ctx, m + i, c + i, AC_GCM_BLOCK_LEN);
-	}
-	if (i < clen) {
-		ac_gcm_dec(ctx, m + i, c + i, clen - i);
-	}
-	err = ac_gcm_check(ctx, c, crypto_secretbox_aes128gcm_ref_ZEROBYTES);
+	err = ac_gcm_dec(ctx, m + crypto_secretbox_aes128gcm_ref_ZEROBYTES, &mlen, clen - crypto_secretbox_aes128gcm_ref_ZEROBYTES,
+			c, clen, NULL, 0, n, crypto_secretbox_aes128gcm_ref_NONCEBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}

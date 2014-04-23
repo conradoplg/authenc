@@ -55,86 +55,40 @@ typedef ac_gcm_ctx_st ac_gcm_ctx_at[1];
 errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len);
 
 /**
- * Initializes authenticated encryption / decryption with an initialization
- * vector, preparing to send a message.
+ * Encrypt and authenticate data.
  *
- * Some modes do not require the key; in that case, it can be NULL.
- * However, in order to write generic code, the same key set before must be
- * used here.
- *
- * The msg_len and data_len must be specified for modes which are not online
- * (e.g. CCM). Otherwise, they can be zero.
- *
- * @param[out] ctx			- the context.
- * @param[in] key			- the key
- * @param[in] key_len		- the key length in bytes.
- * @param[in] iv			- the initialization vector (IV).
- * @param[in] iv_len		- the IV length in bytes.
- * @param[in] msg_len		- the length in bytes of the message to be processed.
- * @param[in] data_len		- the length in bytes of additional data to be processed.
+ * @param[in] ctx				- the context.
+ * @param[out] output			- the buffer where the encrypted and authenticated data will be written.
+ * @param[in,out] output_len 	- input: the length of the buffer. Output: the length of the data written to @p output.
+ * @param[in] input				- the data to encrypt and authenticate.
+ * @param[in] input_len			- the length of the input.
+ * @param[in] data				- additional data to authenticated, but not encrypt.
+ * @param[in] data_len			- the length of data.
+ * @param[in] iv				- the initialization vector. For GCM, must be nonce; MUST NOT be repeated for the same key.
+ * 								  The IV must be sent along with the encrypted/authenticated data, or implicitly computed.
+ * @param[in] iv_len			- the length of the initialization vector.
+ * @return
  */
-errno_t ac_gcm_init(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len,
-		const unsigned char *iv, size_t iv_len, size_t msg_len, size_t data_len);
+errno_t ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, size_t *output_len, size_t output_capacity,
+		const unsigned char *input, size_t input_len, const unsigned char *data,
+		size_t data_len, const unsigned char *iv, size_t iv_len);
 
 /**
- * Inputs additional data to be authenticated only.
+ * Decrypt and verify data.
  *
- * The data buffer must be aligned. It must have BC_BLOCK_LEN bytes, except for
- * the last call when it can have 0 < data_len <= BC_BLOCK_LEN.
- *
- * @param[in,out] ctx		- the context.
- * @param[in] data			- the additional data.
- * @param[in] data_len		- the length in bytes of the data.
+ * @param[out] ctx				- the context.
+ * @param[out] output			- the buffer where the decrypted and authenticated data will be written.
+ * @param[in,out] output_len 	- input: the length of the buffer. Output: the length of the data written to @p output.
+ * @param[in] input				- the data to encrypt and authenticate.
+ * @param[in] input_len			- the length of the input.
+ * @param[in] data				- the additional data to authenticate, but not encrypt.
+ * @param[in] data_len			- the length of data.
+ * @param[in] iv				- the same initialization vector used in encryption.
+ * @param[in] iv_len			- the length of the initialization vector.
+ * @return
  */
-void ac_gcm_data(ac_gcm_ctx_t ctx, unsigned char *data, size_t data_len);
-
-/**
- * Encrypts plaintext.
- *
- * The input buffer must be aligned. It must have BC_BLOCK_LEN bytes, except for
- * the last call when it can have 0 < input_len <= BC_BLOCK_LEN.
- *
- * @param[in,out] ctx		- the context.
- * @param[out] output		- the ciphertext generated.
- * @param[in] input			- hte plaintext to encrypt.
- * @param[in] input_len		- the length in bytes of the plaintext.
- */
-void ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input, size_t input_len);
-
-/**
- * Decrypts ciphertext.
- *
- * The input buffer must be aligned. It must have BC_BLOCK_LEN bytes, except for
- * the last call when it can have 0 < input_len <= BC_BLOCK_LEN.
- *
- * @param[in,out] ctx		- the context.
- * @param[out] output		- the plaintext generated.
- * @param[in] input			- hte ciphertext to decrypt.
- * @param[in] input_len		- the length in bytes of the ciphertext.
- */
-void ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input, size_t input_len);
-
-/**
- * Computes the authentication tag.
- *
- * This finishes the authenticated encryption process.
- *
- * @param[in] ctx		- the context.
- * @param[out] tag		- the buffer for the authentication tag.
- * @param[in] tag_len	- the length of the buffer.
- */
-errno_t ac_gcm_tag(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len);
-
-/**
- * Checks the authentication tag.
- *
- * This finishes the decryption-verification process.
- *
- * @param[in] ctx		- the context.
- * @param[in] tag		- the authentication tag received.
- * @param[in] tag_len	- the length of the authentication tag received.
- * @return 1 if the tag is valid, 0 otherwise.
- */
-int ac_gcm_check(ac_gcm_ctx_t ctx, const unsigned char *tag, size_t tag_len);
+errno_t ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, size_t *output_len, size_t output_capacity,
+		const unsigned char *input, size_t input_len, const unsigned char *data,
+		size_t data_len, const unsigned char *iv, size_t iv_len);
 
 #endif /* AUTHENC_AC_H_ */

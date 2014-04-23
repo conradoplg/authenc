@@ -56,3 +56,10 @@ int authenc_cmp_const(const void * a, const void *b, const size_t size) {
 
 	return result; /* returns 0 if equal, nonzero otherwise */
 }
+
+void authenc_memset(void *v, int c, size_t n) {
+	volatile unsigned char *p = (volatile unsigned char *) v;
+	while (n--) {
+		*p++ = c;
+	}
+}
