@@ -23,12 +23,12 @@
  * Represents the context of the GCM encryption / decryption process.
  */
 typedef struct {
+	sc_aesctr_ctx_at bc_ctx;
 	authenc_align unsigned char last_y[AC_GCM_BLOCK_LEN];
 	authenc_align unsigned char ctr[AC_GCM_BLOCK_LEN];
 	uint64_t len_a;
 	uint64_t len_c;
 	authenc_align dig_t table[32 * (AC_GCM_BLOCK_LEN / sizeof(dig_t) + 1)];
-	sc_aesctr_ctx_at bc_ctx;
 } ac_gcm_ctx_st;
 
 /**
@@ -59,7 +59,8 @@ errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len);
  *
  * @param[in] ctx				- the context.
  * @param[out] output			- the buffer where the encrypted and authenticated data will be written.
- * @param[in,out] output_len 	- input: the length of the buffer. Output: the length of the data written to @p output.
+ * @param[out] output_len 		- the length of the data written to @p output.
+ * @param[in] output_capacity	- the length of the @p output buffer. Must be equal or larger to @p input_len + AC_GCM_TAG_LEN.
  * @param[in] input				- the data to encrypt and authenticate.
  * @param[in] input_len			- the length of the input.
  * @param[in] data				- additional data to authenticated, but not encrypt.
@@ -78,7 +79,8 @@ errno_t ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, size_t *output_len, 
  *
  * @param[out] ctx				- the context.
  * @param[out] output			- the buffer where the decrypted and authenticated data will be written.
- * @param[in,out] output_len 	- input: the length of the buffer. Output: the length of the data written to @p output.
+ * @param[out] output_len 		- the length of the data written to @p output.
+ * @param[in] output_capacity	- the length of the @p output buffer. Must be equal or larger to @p input_len - AC_GCM_TAG_LEN.
  * @param[in] input				- the data to encrypt and authenticate.
  * @param[in] input_len			- the length of the input.
  * @param[in] data				- the additional data to authenticate, but not encrypt.

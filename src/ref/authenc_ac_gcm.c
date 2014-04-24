@@ -180,14 +180,19 @@ errno_t ac_gcm_init_low(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_l
 }
 
 void ac_gcm_data_low(ac_gcm_ctx_t ctx, const unsigned char *data, size_t data_len) {
-	authenc_align unsigned char tmp[AC_GCM_BLOCK_LEN];
-	const unsigned char *t = data;
-	if (data_len < AC_GCM_BLOCK_LEN) {
-		t = tmp;
-		memcpy(tmp, data, data_len);
-		memset(tmp + data_len, 0, AC_GCM_BLOCK_LEN - data_len);
+	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
+	size_t i, len;
+
+	len = (data_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
+	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
+		ghash_input(ctx, data + i);
 	}
-	ghash_input(ctx, t);
+	len = data_len % AC_GCM_BLOCK_LEN;
+	if (len) {
+		memcpy(t, data + i, len);
+		memset(t + len, 0, sizeof(t) - len);
+		ghash_input(ctx, t);
+	}
 	ctx->len_a += data_len;
 }
 
