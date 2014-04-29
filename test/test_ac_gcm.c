@@ -18,13 +18,13 @@ static void rand_bytes(void *p, size_t len) {
 
 static errno_t test_gcm(void) {
 	errno_t err = AUTHENC_OK;
-#if 0
 	unsigned char key[SC_AES128CTR_KEY_LEN];
 	unsigned char iv[AC_GCM_IV_LEN];
 	authenc_align unsigned char msg[AC_GCM_BLOCK_LEN];
-	authenc_align unsigned char cipher[AC_GCM_BLOCK_LEN];
+	authenc_align unsigned char cipher[AC_GCM_BLOCK_LEN + AC_GCM_TAG_LEN];
 	unsigned char tag[AC_GCM_TAG_LEN];
 	ac_gcm_ctx_at ctx;
+	size_t len;
 
 	puts("GCM passes test vector 13?");
 	{
@@ -32,8 +32,7 @@ static errno_t test_gcm(void) {
 		memset(key, 0, sizeof(key));
 		memset(iv, 0, sizeof(iv));
 		ac_gcm_key(ctx, key, sizeof(key));
-		ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), 0, 0);
-		ac_gcm_tag_low(ctx, tag, sizeof(tag));
+		ac_gcm_enc(ctx, tag, &len, sizeof(tag), NULL, 0, NULL, 0, iv, sizeof(iv));
 		assert(memcmp(tag, tag_ref, sizeof(tag)) == 0);
 	}
 
@@ -45,13 +44,10 @@ static errno_t test_gcm(void) {
 		memset(iv, 0, sizeof(iv));
 		memset(msg, 0, sizeof(msg));
 		ac_gcm_key(ctx, key, sizeof(key));
-		ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), 0, 0);
-		ac_gcm_enc_low(ctx, cipher, msg, sizeof(msg));
-		ac_gcm_tag_low(ctx, tag, sizeof(tag));
-		assert(memcmp(cipher, cipher_ref, sizeof(cipher)) == 0);
-		assert(memcmp(tag, tag_ref, sizeof(tag)) == 0);
+		ac_gcm_enc(ctx, cipher, &len, sizeof(cipher), msg, sizeof(msg), NULL, 0, iv, sizeof(iv));
+		assert(memcmp(cipher, cipher_ref, AC_GCM_BLOCK_LEN) == 0);
+		assert(memcmp(cipher + AC_GCM_BLOCK_LEN, tag_ref, AC_GCM_TAG_LEN) == 0);
 	}
-#endif
 
 	return err;
 }

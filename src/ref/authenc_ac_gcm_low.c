@@ -6,6 +6,8 @@
 /* Private definitions                                                        */
 /*============================================================================*/
 
+#define AC_GCM_REFLC
+
 #define GCM_DIGS (AC_GCM_BLOCK_LEN / sizeof(dig_t))
 #define GCM_BITS 128
 #define DIGIT (sizeof(dig_t) * 8)
@@ -98,10 +100,6 @@ static void rdcn(dig_t *c, dig_t *a) {
 	dig_t t[GCM_DIGS];
 	dig_t d;
 
-	d = lshb_low(a, a, 1);
-	lshb_low(a + GCM_DIGS, a + GCM_DIGS, 1);
-	a[GCM_DIGS] ^= d;
-
 	d = a[0];
 	d = (d << (DIGIT - 1)) ^ (d << (DIGIT - 2)) ^ (d << (DIGIT - 7));
 	a[GCM_DIGS - 1] ^= d;
@@ -174,6 +172,17 @@ void ac_gcm_tab_low(dig_t *t, unsigned char *h) {
 	size_t i;
 	dig_t *b = (dig_t *) h;
 
+#ifdef AC_GCM_REFLC
+	// Actually multiply by (H << 1)
+	dig_t c[GCM_DIGS];
+	dig_t d;
+
+	d = lshb_low(c, b, 1);
+	c[GCM_DIGS - 1] ^= (d << (DIGIT - 1)) ^ (d << (DIGIT - 2)) ^ (d << (DIGIT - 7));
+	c[0] ^= d;
+	b = c;
+#endif
+
 	memset(table, 0, 16 * sizeof(*table));
 
 	u = 0;
@@ -239,8 +248,8 @@ void ac_gcm_mul_low(dig_t *c, dig_t *a, dig_t *b) {
  */
 #if defined(AC_GCM_REFLC)
 void ac_gcm_convert_low(unsigned char *c, const unsigned char *a) {
-	bc_t t;
-	int i, j;
+	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
+	size_t i, j;
 #ifdef BIGED
 	dig_t *ad = (dig_t *) a;
 	dig_t *td = (dig_t *) t;
