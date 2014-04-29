@@ -56,73 +56,40 @@ static errno_t test_ac(void) {
 	errno_t err = AUTHENC_OK;
 	unsigned char key[SC_AES128CTR_KEY_LEN];
 	unsigned char iv[AC_GCM_IV_LEN];
-	authenc_align unsigned char msg[AC_GCM_BLOCK_LEN];
-	authenc_align unsigned char cipher[sizeof(msg)];
+	authenc_align unsigned char msg[AC_GCM_BLOCK_LEN * 16];
+	authenc_align unsigned char cipher[sizeof(msg) + AC_GCM_TAG_LEN];
 	authenc_align unsigned char computed_msg[sizeof(msg)];
-	authenc_align unsigned char fullcipher[sizeof(msg)+AC_GCM_IV_LEN+AC_GCM_TAG_LEN];
 	ac_gcm_ctx_at ctx;
-	size_t msg_len, cipher_len;
+	size_t msg_len, dec_msg_len, cipher_len, j;
 
 	rand_bytes(key, sizeof(key));
 	rand_bytes(iv, sizeof(iv));
 	rand_bytes(msg, sizeof(msg));
 
-#if 0
-	rand_bytes(cipher, sizeof(cipher));
-	ac_gcm_key(ctx, key, sizeof(key));
-	ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), sizeof(msg), sizeof(msg));
-	ac_gcm_enc_low(ctx, cipher, msg, sizeof(msg));
-	ac_gcm_data_low(ctx, msg, sizeof(msg));
-	ac_gcm_tag_low(ctx, tag, sizeof(tag));
-
-	rand_bytes(computed_msg, sizeof(computed_msg));
-	ac_gcm_key(ctx, key, sizeof(key));
-	ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), sizeof(msg), sizeof(msg));
-	ac_gcm_dec_low(ctx, computed_msg, cipher, sizeof(msg));
-	ac_gcm_data_low(ctx, msg, sizeof(msg));
-	assert(memcmp(msg, computed_msg, sizeof(msg)) == 0);
-	assert(ac_gcm_check_low(ctx, tag, sizeof(tag)) == AUTHENC_OK);
-
-	rand_bytes(computed_msg, sizeof(computed_msg));
-	ac_gcm_key(ctx, key, sizeof(key));
-	ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), sizeof(msg), sizeof(msg));
-	ac_gcm_dec_low(ctx, computed_msg, cipher, sizeof(msg));
-	ac_gcm_data_low(ctx, msg, sizeof(msg));
-	rand_bytes(tag, sizeof(tag));
-	assert(ac_gcm_check_low(ctx, tag, sizeof(tag)) != AUTHENC_OK);
-#endif
-
-	rand_bytes(cipher, sizeof(cipher));
-	ac_gcm_key(ctx, key, sizeof(key));
-	ac_gcm_enc(ctx, fullcipher, &cipher_len, sizeof(fullcipher), msg, sizeof(msg), msg, sizeof(msg), iv, sizeof(iv));
-
-	ac_gcm_key(ctx, key, sizeof(key));
-	assert(ac_gcm_dec(ctx, computed_msg, &msg_len, sizeof(computed_msg), fullcipher, cipher_len, msg, sizeof(msg), iv, sizeof(iv)) == AUTHENC_OK);
-	assert(memcmp(msg, computed_msg, sizeof(msg)) == 0);
-
-#if 0
-	for (j = 1; j < sizeof(msg); j++) {
-		printf("Testing message with size %zu\n", sizeof(msg) - j);
-		rand_bytes(key, sizeof(key));
-		rand_bytes(iv, sizeof(iv));
-		rand_bytes(msg, sizeof(msg));
-
+	for (msg_len = 0; msg_len < sizeof(msg); msg_len++) {
 		rand_bytes(cipher, sizeof(cipher));
-		ac_gcm_key(ctx, key, sizeof(key));
-		ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), sizeof(msg)-j, sizeof(msg)-j);
-		ac_gcm_enc_low(ctx, cipher, msg, sizeof(msg)-j);
-		ac_gcm_data_low(ctx, msg, sizeof(msg)-j);
-		ac_gcm_tag_low(ctx, tag, sizeof(tag));
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_enc(ctx, cipher, &cipher_len, sizeof(cipher), msg, msg_len, msg, msg_len, iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
 
 		rand_bytes(computed_msg, sizeof(computed_msg));
-		ac_gcm_key(ctx, key, sizeof(key));
-		ac_gcm_init_low(ctx, key, sizeof(key), iv, sizeof(iv), sizeof(msg)-j, sizeof(msg)-j);
-		ac_gcm_dec_low(ctx, computed_msg, cipher, sizeof(msg)-j);
-		ac_gcm_data_low(ctx, msg, sizeof(msg)-j);
-		assert(memcmp(msg, computed_msg, sizeof(msg)-j) == 0);
-		assert(ac_gcm_check_low(ctx, tag, sizeof(tag)) == AUTHENC_OK);
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_dec(ctx, computed_msg, &dec_msg_len, sizeof(computed_msg), cipher, cipher_len, msg, msg_len, iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
+		assert(dec_msg_len == msg_len && memcmp(msg, computed_msg, msg_len) == 0);
 	}
-#endif
+
+	rand_bytes(computed_msg, sizeof(computed_msg));
+	err = ac_gcm_key(ctx, key, sizeof(key));
+	assert(err == AUTHENC_OK);
+	for (j = 0; j < (cipher_len * 8); j++) {
+		cipher[j/8] ^= (1 << (cipher_len % 8));
+		err = ac_gcm_dec(ctx, computed_msg, &dec_msg_len, sizeof(computed_msg), cipher, cipher_len, msg, msg_len, iv, sizeof(iv));
+		assert(err != AUTHENC_OK);
+		cipher[j/8] ^= (1 << (cipher_len % 8));
+	}
 
 	return err;
 }
