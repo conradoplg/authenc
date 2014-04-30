@@ -67,16 +67,19 @@
 
 .endm
 
-#ifndef AC_GCM_REFLC
-
-ac_gcm_mul_low:
-	vld1.32 {d4,d5}, [r1]
-	vld1.32 {d6,d7}, [r2]
-
-	vmov.i64 d14, #0x0000FFFFFFFFFFFF
-	vmov.i64 d13, #0x00000000FFFFFFFF
-	vmov.i64 d12, #0x000000000000FFFF
-
+/**
+ * Binary polyonmial multiplication.
+ *
+ * Clobbers d0-d7, d12-d14, d24-d31
+ *
+ * @param[in] q2		First operand.
+ * @param[in] q3		Second operand.
+ * @param[in] d12		The constant #0x000000000000FFFF
+ * @param[in] d13		The constant #0x00000000FFFFFFFF
+ * @param[in] d14		The constant #0x0000FFFFFFFFFFFF
+ * @param[out] q1:q0	The result q2 * q3.
+ */
+.macro mul128_p8
 	mul64_p8 q0, d0, d1, d4, d6, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	mul64_p8 q1, d2, d3, d5, d7, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	veor d6, d7
@@ -86,7 +89,17 @@ ac_gcm_mul_low:
 	veor q2, q1
 	veor d1, d4
 	veor d2, d5
+.endm
 
+/**
+ * GCM reduction (modulo z^128 + z^7 + z^2 + z + 1)
+ *
+ * Clobbers q0-q3,q8-q9,d30
+ *
+ * @param[in] q1:q0		The number polynomial to be reduced.
+ * @param[out] q0		The reduced value.
+ */
+.macro rdc
 	vmov.i8 d30, #135
 	//[d3:d2|d1:d0]
 	//[d3:d2] * r(z)
@@ -125,46 +138,17 @@ ac_gcm_mul_low:
 	//Reduce d18 (B7)
 	vmull.p8 q2, d18, d30
 	veor d0, d4
+.endm
 
-	vst1.32 {d0,d1}, [r0]
-
-	bx lr
-
-ac_gcm_convert_low:
-	ldm r1, {r1, r2, r3, ip}
-	rbit r1, r1
-	rbit r2, r2
-	rbit r3, r3
-	rbit ip, ip
-	rev r1, r1
-	rev r2, r2
-	rev r3, r3
-	rev ip, ip
-	stm r0, {r1, r2, r3, ip}
-	bx lr
-
-#else
-
-ac_gcm_mul_low:
-	vld1.32 {d4,d5}, [r1]
-	vld1.32 {d6,d7}, [r2]
-
-	vmov.i64 d14, #0x0000FFFFFFFFFFFF
-	vmov.i64 d13, #0x00000000FFFFFFFF
-	vmov.i64 d12, #0x000000000000FFFF
-
-	// Binary polyonmial multiplication. Inputs: q2, q3.
-	mul64_p8 q0, d0, d1, d4, d6, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	mul64_p8 q1, d2, d3, d5, d7, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	veor d6, d7
-	veor d7, d4, d5
-	mul64_p8 q2, d4, d5, d6, d7, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	veor q2, q0
-	veor q2, q1
-	veor d1, d4
-	veor d2, d5
-	// Output: q1:q0 = q2 * q3
-
+/**
+ * Reflected GCM reduction.
+ *
+ * Clobbers q0-q3.
+ *
+ * @param[in] q1:q0		The number polynomial to be reduced.
+ * @param[out] q0		The reduced value.
+ */
+.macro rrdc
 	// Reflected reduction. Input: q1:q0.
 	//d4 = d0 << 57
 	//d5 = d1 << 57
@@ -208,6 +192,52 @@ ac_gcm_mul_low:
 	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2) ^ (d1 >> 7)
 	veor q0, q0, q3
 	//Output: q0
+.endm
+
+#ifndef AC_GCM_REFLC
+
+ac_gcm_mul_low:
+	vld1.32 {d4,d5}, [r1]
+	vld1.32 {d6,d7}, [r2]
+
+	vmov.i64 d14, #0x0000FFFFFFFFFFFF
+	vmov.i64 d13, #0x00000000FFFFFFFF
+	vmov.i64 d12, #0x000000000000FFFF
+
+	mul128_p8
+
+	rdc
+
+	vst1.32 {d0,d1}, [r0]
+
+	bx lr
+
+ac_gcm_convert_low:
+	ldm r1, {r1, r2, r3, ip}
+	rbit r1, r1
+	rbit r2, r2
+	rbit r3, r3
+	rbit ip, ip
+	rev r1, r1
+	rev r2, r2
+	rev r3, r3
+	rev ip, ip
+	stm r0, {r1, r2, r3, ip}
+	bx lr
+
+#else
+
+ac_gcm_mul_low:
+	vld1.32 {d4,d5}, [r1]
+	vld1.32 {d6,d7}, [r2]
+
+	vmov.i64 d14, #0x0000FFFFFFFFFFFF
+	vmov.i64 d13, #0x00000000FFFFFFFF
+	vmov.i64 d12, #0x000000000000FFFF
+
+	mul128_p8
+
+	rrdc
 
 	vst1.32 {d0,d1}, [r0]
 
