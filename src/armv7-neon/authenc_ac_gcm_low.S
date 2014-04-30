@@ -70,8 +70,8 @@
 #ifndef AC_GCM_REFLC
 
 ac_gcm_mul_low:
-	vld1.32 {d4,d5}, [r1:64]
-	vld1.32 {d6,d7}, [r2:64]
+	vld1.32 {d4,d5}, [r1]
+	vld1.32 {d6,d7}, [r2]
 
 	vmov.i64 d14, #0x0000FFFFFFFFFFFF
 	vmov.i64 d13, #0x00000000FFFFFFFF
@@ -126,7 +126,7 @@ ac_gcm_mul_low:
 	vmull.p8 q2, d18, d30
 	veor d0, d4
 
-	vst1.32 {d0,d1}, [r0:64]
+	vst1.32 {d0,d1}, [r0]
 
 	bx lr
 
@@ -146,8 +146,8 @@ ac_gcm_convert_low:
 #else
 
 ac_gcm_mul_low:
-	vld1.32 {d4,d5}, [r1:64]
-	vld1.32 {d6,d7}, [r2:64]
+	vld1.32 {d4,d5}, [r1]
+	vld1.32 {d6,d7}, [r2]
 
 	vmov.i64 d14, #0x0000FFFFFFFFFFFF
 	vmov.i64 d13, #0x00000000FFFFFFFF
@@ -191,15 +191,15 @@ ac_gcm_mul_low:
 	veor		q0,q0,q1		@
 	veor		q0,q0,q3		@
 
-	vst1.32 {d0,d1}, [r0:64]
+	vst1.32 {d0,d1}, [r0]
 
 	bx lr
 
 ac_gcm_convert_low:
-	vldm r1, {q0}
+	vld1.32 {q0}, [r1]
 	vrev64.8 q0, q0
 	vswp d0, d1
-	vstm r0, {q0}
+	vst1.32 {q0}, [r0]
 	bx lr
 
 #endif

@@ -83,7 +83,7 @@ static errno_t test_ac(void) {
 		assert(dec_msg_len == msg_len && memcmp(msg, computed_msg, msg_len) == 0);
 	}
 
-#if 0
+#if 1
 	puts("Randomized tests, misaligned");
 	for (msg_len = 0; msg_len < sizeof(msg); msg_len++) {
 		//Misaligned
