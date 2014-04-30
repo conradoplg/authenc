@@ -66,7 +66,9 @@ static errno_t test_ac(void) {
 	rand_bytes(iv, sizeof(iv));
 	rand_bytes(msg, sizeof(msg));
 
+	puts("Randomized tests, aligned");
 	for (msg_len = 0; msg_len < sizeof(msg); msg_len++) {
+		//Aligned
 		rand_bytes(cipher, sizeof(cipher));
 		err = ac_gcm_key(ctx, key, sizeof(key));
 		assert(err == AUTHENC_OK);
@@ -81,6 +83,27 @@ static errno_t test_ac(void) {
 		assert(dec_msg_len == msg_len && memcmp(msg, computed_msg, msg_len) == 0);
 	}
 
+#if 0
+	puts("Randomized tests, misaligned");
+	for (msg_len = 0; msg_len < sizeof(msg); msg_len++) {
+		//Misaligned
+		size_t offset = sizeof(msg) - msg_len - 1;
+		rand_bytes(cipher, sizeof(cipher));
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_enc(ctx, cipher + offset, &cipher_len, sizeof(cipher), msg + offset, msg_len, msg + offset, msg_len, iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
+
+		rand_bytes(computed_msg, sizeof(computed_msg));
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_dec(ctx, computed_msg + offset, &dec_msg_len, sizeof(computed_msg), cipher + offset, cipher_len, msg + offset, msg_len, iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
+		assert(dec_msg_len == msg_len && memcmp(msg + offset, computed_msg + offset, msg_len) == 0);
+	}
+#endif
+
+	puts("Corrupted ciphertext tests");
 	rand_bytes(computed_msg, sizeof(computed_msg));
 	err = ac_gcm_key(ctx, key, sizeof(key));
 	assert(err == AUTHENC_OK);
