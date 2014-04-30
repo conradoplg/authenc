@@ -118,6 +118,16 @@ void ac_gcm_tab_low(dig_t *t, unsigned char *h);
  */
 void ac_gcm_convert_low(unsigned char *c, const unsigned char *a);
 
+/**
+ * Inputs a block into the GHASH function.
+ *
+ * @param[in,out] last_y	- input: last Y value. Output: new Y value.
+ * @param[in] table			- the precomputed H table.
+ * @param[in] input			- the input.
+ * @param[in] len			- the input length.
+ */
+void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned char *input, size_t len);
+
 
 /*============================================================================*/
 /* Public definitions                                                         */
@@ -158,27 +168,6 @@ errno_t ac_gcm_init_low(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_l
 	ctx->ctr[AC_GCM_BLOCK_LEN - 1] = 1;
 	authenc_inc32(ctx->ctr, 1, AC_GCM_BLOCK_LEN);
 	return AUTHENC_OK;
-}
-
-/**
- * Inputs a block into the GHASH function.
- *
- * @param[in,out] last_y	- input: last Y value. Output: new Y value.
- * @param[in] table			- the precomputed H table.
- * @param[in] input			- the input.
- * @param[in] len			- the input length.
- */
-void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned char *input, size_t len) {
-	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
-	size_t i;
-
-	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
-		//xor (field addition)
-		ac_gcm_convert_low(t, input + i);
-		authenc_xor(last_y, last_y, t, AC_GCM_BLOCK_LEN);
-		//binary field multiplication
-		ac_gcm_mul_low((dig_t *) last_y, (dig_t *) last_y, (dig_t *) table);
-	}
 }
 
 void ac_gcm_data_low(ac_gcm_ctx_t ctx, const unsigned char *data, size_t data_len) {

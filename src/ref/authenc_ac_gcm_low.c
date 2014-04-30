@@ -1,4 +1,5 @@
 #include "authenc_ac_gcm.h"
+#include "authenc_util.h"
 
 #include <string.h>
 
@@ -279,3 +280,16 @@ void ac_gcm_convert_low(unsigned char *c, const unsigned char *a) {
 	}
 }
 #endif
+
+void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned char *input, size_t len) {
+	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
+	size_t i;
+
+	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
+		//xor (field addition)
+		ac_gcm_convert_low(t, input + i);
+		authenc_xor(last_y, last_y, t, AC_GCM_BLOCK_LEN);
+		//binary field multiplication
+		ac_gcm_mul_low((dig_t *) last_y, (dig_t *) last_y, (dig_t *) table);
+	}
+}
