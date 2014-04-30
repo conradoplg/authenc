@@ -153,6 +153,7 @@ ac_gcm_mul_low:
 	vmov.i64 d13, #0x00000000FFFFFFFF
 	vmov.i64 d12, #0x000000000000FFFF
 
+	// Binary polyonmial multiplication. Inputs: q2, q3.
 	mul64_p8 q0, d0, d1, d4, d6, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	mul64_p8 q1, d2, d3, d5, d7, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	veor d6, d7
@@ -162,34 +163,51 @@ ac_gcm_mul_low:
 	veor q2, q1
 	veor d1, d4
 	veor d2, d5
+	// Output: q1:q0 = q2 * q3
 
+	// Reflected reduction. Input: q1:q0.
 	//d4 = d0 << 57
 	//d5 = d1 << 57
-	vshl.i64	q2,q0,#57		@ 1st phase
+	vshl.i64 q2, q0, #57
 	//d6 = d0 << 62
 	//d7 = d1 << 62
-	vshl.i64	q3,q0,#62
+	vshl.i64 q3, q0, #62
 	//d6 = (d0 << 62) ^ (d0 << 57)
 	//d7 = (d1 << 62) ^ (d1 << 57)
-	veor		q3,q3,q2		@
+	veor q3, q3, q2
 	//d4 = (d0 << 63)
 	//d5 = (d1 << 63)
-	vshl.i64	q2,q0,#63
+	vshl.i64 q2, q0, #63
 	//d6 = (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
 	//d7 = (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor		q3, q3, q2		@
+	veor q3, q3, q2
 	//d1 = d1 ^ (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
- 	veor		d1,d1,d6	@
- 	//d2 = d2 ^ (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor		d2,d2,d7
+	veor d1, d1, d6
+	//d2 = d2 ^ (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
+	veor d2, d2, d7
 
-	vshr.u64	q3,q0,#1		@ 2nd phase
-	veor		q1,q1,q0
-	veor		q0,q0,q3		@
-	vshr.u64	q3,q3,#6
-	vshr.u64	q0,q0,#1		@
-	veor		q0,q0,q1		@
-	veor		q0,q0,q3		@
+	//d6 = d0 >> 1
+	//d7 = d1 >> 1
+	vshr.u64 q3, q0, #1
+	//d2' = d2 ^ d0
+	//d3' = d3 ^ d1
+	veor q1, q1, q0
+	//d0' = d0 ^ (d0 >> 1)
+	//d1' = d1 ^ (d1 >> 1)
+	veor q0, q0, q3
+	//d6 = (d0 >> 7)
+	//d7 = (d1 >> 7)
+	vshr.u64 q3, q3, #6
+	//d0' = (d0 >> 1) ^ (d0 >> 2)
+	//d1' = (d1 >> 1) ^ (d1 >> 2)
+	vshr.u64 q0, q0, #1
+	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2)
+	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2)
+	veor q0, q0, q1
+	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2) ^ (d0 >> 7)
+	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2) ^ (d1 >> 7)
+	veor q0, q0, q3
+	//Output: q0
 
 	vst1.32 {d0,d1}, [r0]
 
