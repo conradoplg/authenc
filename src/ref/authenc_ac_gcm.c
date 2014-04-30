@@ -120,25 +120,6 @@ void ac_gcm_convert_low(unsigned char *c, const unsigned char *a);
 
 
 /*============================================================================*/
-/* Private definitions                                                        */
-/*============================================================================*/
-
-/**
- * Inputs a block into the GHASH function.
- *
- * @param[in,out] ctx		- the context.
- * @param[in] input			- the input block with AC_GCM_BLOCK_LEN bytes.
- */
-static void ghash_input(ac_gcm_ctx_t ctx, const unsigned char *input) {
-	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
-	//xor (field addition)
-	ac_gcm_convert_low(t, input);
-	authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
-	//binary field multiplication
-	ac_gcm_mul_low((dig_t *) ctx->last_y, (dig_t *) ctx->last_y, (dig_t *) ctx->table);
-}
-
-/*============================================================================*/
 /* Public definitions                                                         */
 /*============================================================================*/
 
@@ -179,19 +160,37 @@ errno_t ac_gcm_init_low(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_l
 	return AUTHENC_OK;
 }
 
+/**
+ * Inputs a block into the GHASH function.
+ *
+ * @param[in,out] ctx		- the context.
+ * @param[in] input			- the input block with AC_GCM_BLOCK_LEN bytes.
+ */
+void ac_gcm_ghash_low(ac_gcm_ctx_t ctx, const unsigned char *input, size_t len) {
+	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
+	size_t i;
+
+	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
+		//xor (field addition)
+		ac_gcm_convert_low(t, input + i);
+		authenc_xor(ctx->last_y, ctx->last_y, t, AC_GCM_BLOCK_LEN);
+		//binary field multiplication
+		ac_gcm_mul_low((dig_t *) ctx->last_y, (dig_t *) ctx->last_y, (dig_t *) ctx->table);
+	}
+}
+
 void ac_gcm_data_low(ac_gcm_ctx_t ctx, const unsigned char *data, size_t data_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
-	size_t i, len;
+	size_t len;
 
 	len = (data_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
-	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
-		ghash_input(ctx, data + i);
-	}
+	ac_gcm_ghash_low(ctx, data, len);
+	data += len;
 	len = data_len % AC_GCM_BLOCK_LEN;
 	if (len) {
-		memcpy(t, data + i, len);
+		memcpy(t, data, len);
 		memset(t + len, 0, sizeof(t) - len);
-		ghash_input(ctx, t);
+		ac_gcm_ghash_low(ctx, t, sizeof(t));
 	}
 	ctx->len_a += data_len;
 }
@@ -199,19 +198,18 @@ void ac_gcm_data_low(ac_gcm_ctx_t ctx, const unsigned char *data, size_t data_le
 void ac_gcm_enc_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input,
 		size_t input_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
-	size_t i, len;
+	size_t len;
 
 	sc_aesctr_enc(ctx->bc_ctx, output, input, input_len, ctx->ctr, sizeof(ctx->ctr));
 	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 	len = (input_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
-	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
-		ghash_input(ctx, output + i);
-	}
+	ac_gcm_ghash_low(ctx, output, len);
+	output += len;
 	len = input_len % AC_GCM_BLOCK_LEN;
 	if (len) {
-		memcpy(t, output + i, len);
+		memcpy(t, output, len);
 		memset(t + len, 0, sizeof(t) - len);
-		ghash_input(ctx, t);
+		ac_gcm_ghash_low(ctx, t, sizeof(t));
 	}
 
 	ctx->len_c += input_len;
@@ -220,19 +218,18 @@ void ac_gcm_enc_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char
 void ac_gcm_dec_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input,
 		size_t input_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
-	size_t i, len;
+	size_t len;
 
 	sc_aesctr_enc(ctx->bc_ctx, output, input, input_len, ctx->ctr, sizeof(ctx->ctr));
 	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 	len = (input_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
-	for (i = 0; i < len; i += AC_GCM_BLOCK_LEN) {
-		ghash_input(ctx, input + i);
-	}
+	ac_gcm_ghash_low(ctx, input, len);
+	input += len;
 	len = input_len % AC_GCM_BLOCK_LEN;
 	if (len) {
-		memcpy(t, input + i, len);
+		memcpy(t, input, len);
 		memset(t + len, 0, sizeof(t) - len);
-		ghash_input(ctx, t);
+		ac_gcm_ghash_low(ctx, t, sizeof(t));
 	}
 
 	ctx->len_c += input_len;
@@ -248,7 +245,7 @@ errno_t ac_gcm_tag_low(ac_gcm_ctx_t ctx, unsigned char *tag, size_t tag_len) {
 	//Build [len(A)]_64 || [len(C)]_64
 	authenc_write64(t, 8 * ctx->len_a);
 	authenc_write64(t + sizeof(uint64_t), 8 * ctx->len_c);
-	ghash_input(ctx, t);
+	ac_gcm_ghash_low(ctx, t, sizeof(t));
 
 	//Compute S
 	ac_gcm_convert_low(ctx->last_y, ctx->last_y);
