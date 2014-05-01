@@ -47,6 +47,7 @@ void ac_gcm_tab_low(dig_t *t, unsigned char *h) {
 #endif
 }
 
+#if 0
 void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned char *input, size_t len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
 	size_t i;
@@ -59,3 +60,4 @@ void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned 
 		ac_gcm_mul_low((dig_t *) last_y, (dig_t *) last_y, (dig_t *) table);
 	}
 }
+#endif

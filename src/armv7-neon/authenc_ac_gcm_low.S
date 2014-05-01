@@ -2,6 +2,7 @@
 .align
 .globl ac_gcm_mul_low
 .globl ac_gcm_convert_low
+.globl ac_gcm_ghash_low
 
 #define AC_GCM_REFLC
 
@@ -70,7 +71,7 @@
 /**
  * Binary polynomial multiplication.
  *
- * Clobbers d0-d7, d16-d18, d24-d31
+ * Clobbers d0-d7, d16-d18,d20-d31
  *
  * @param[in] q2		First operand.
  * @param[in] q3		Second operand.
@@ -82,13 +83,13 @@
 .macro mul128_p8
 	mul64_p8 q0, d0, d1, d4, d6, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	mul64_p8 q1, d2, d3, d5, d7, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	veor d6, d7
-	veor d7, d4, d5
-	mul64_p8 q2, d4, d5, d6, d7, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	veor q2, q0
-	veor q2, q1
-	veor d1, d4
-	veor d2, d5
+	veor d20, d6, d7
+	veor d21, d4, d5
+	mul64_p8 q11, d22, d23, d20, d21, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
+	veor q11, q0
+	veor q11, q1
+	veor d1, d22
+	veor d2, d23
 .endm
 
 /**
@@ -143,45 +144,45 @@
 /**
  * Reflected GCM reduction.
  *
- * Clobbers q0-q3.
+ * Clobbers q0,q1,q8,q9
  *
  * @param[in] q1:q0		The number polynomial to be reduced.
  * @param[out] q0		The reduced value.
  */
 .macro rrdc
 	// Reflected reduction. Input: q1:q0.
-	//d4 = d0 << 57
-	//d5 = d1 << 57
-	vshl.i64 q2, q0, #57
-	//d6 = d0 << 62
-	//d7 = d1 << 62
-	vshl.i64 q3, q0, #62
-	//d6 = (d0 << 62) ^ (d0 << 57)
-	//d7 = (d1 << 62) ^ (d1 << 57)
-	veor q3, q3, q2
-	//d4 = (d0 << 63)
-	//d5 = (d1 << 63)
-	vshl.i64 q2, q0, #63
-	//d6 = (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
-	//d7 = (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor q3, q3, q2
+	//d16 = d0 << 57
+	//d17 = d1 << 57
+	vshl.i64 q8, q0, #57
+	//d18 = d0 << 62
+	//d19 = d1 << 62
+	vshl.i64 q9, q0, #62
+	//d18 = (d0 << 62) ^ (d0 << 57)
+	//d19 = (d1 << 62) ^ (d1 << 57)
+	veor q9, q9, q8
+	//d16 = (d0 << 63)
+	//d17 = (d1 << 63)
+	vshl.i64 q8, q0, #63
+	//d18 = (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
+	//d19 = (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
+	veor q9, q9, q8
 	//d1 = d1 ^ (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
-	veor d1, d1, d6
+	veor d1, d1, d18
 	//d2 = d2 ^ (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor d2, d2, d7
+	veor d2, d2, d19
 
-	//d6 = d0 >> 1
-	//d7 = d1 >> 1
-	vshr.u64 q3, q0, #1
+	//d18 = d0 >> 1
+	//d19 = d1 >> 1
+	vshr.u64 q9, q0, #1
 	//d2' = d2 ^ d0
 	//d3' = d3 ^ d1
 	veor q1, q1, q0
 	//d0' = d0 ^ (d0 >> 1)
 	//d1' = d1 ^ (d1 >> 1)
-	veor q0, q0, q3
-	//d6 = (d0 >> 7)
-	//d7 = (d1 >> 7)
-	vshr.u64 q3, q3, #6
+	veor q0, q0, q9
+	//d18 = (d0 >> 7)
+	//d19 = (d1 >> 7)
+	vshr.u64 q9, q9, #6
 	//d0' = (d0 >> 1) ^ (d0 >> 2)
 	//d1' = (d1 >> 1) ^ (d1 >> 2)
 	vshr.u64 q0, q0, #1
@@ -190,7 +191,7 @@
 	veor q0, q0, q1
 	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2) ^ (d0 >> 7)
 	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2) ^ (d1 >> 7)
-	veor q0, q0, q3
+	veor q0, q0, q9
 	//Output: q0
 .endm
 
@@ -249,5 +250,38 @@ ac_gcm_convert_low:
 	vswp d0, d1
 	vst1.32 {q0}, [r0]
 	bx lr
+
+
+ac_gcm_ghash_low:
+	teq r3, #0
+	bxeq lr
+	// Load old Y
+	vldm r0, {q2}
+	vmov.i64 d18, #0x0000FFFFFFFFFFFF
+	// Load H
+	vldm r1, {q3}
+	vmov.i64 d17, #0x00000000FFFFFFFF
+	vmov.i64 d16, #0x000000000000FFFF
+
+	ghash_block:
+	// Load input
+	vld1.64 {q0}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q0, q0
+	vswp d0, d1
+	// Y' = in ^ Y
+	veor q2, q0
+	// Y' = (in ^ Y) * H
+	mul128_p8
+	rrdc
+	vmov q2, q0
+
+	subs r3, #16
+	bne ghash_block
+
+	vstm r0, {q2}
+
+	bx lr
+
 
 #endif
