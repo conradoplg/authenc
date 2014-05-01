@@ -83,7 +83,7 @@
 .macro mul128_p8
 	mul64_p8 q0, d0, d1, d4, d6, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	mul64_p8 q1, d2, d3, d5, d7, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	veor d20, d6, d7
+	//veor d20, d6, d7
 	veor d21, d4, d5
 	mul64_p8 q11, d22, d23, d20, d21, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	veor q11, q0
@@ -147,7 +147,7 @@
  * Clobbers q0,q1,q8,q9
  *
  * @param[in] q1:q0		The number polynomial to be reduced.
- * @param[out] q0		The reduced value.
+ * @param[out] q2		The reduced value.
  */
 .macro rrdc
 	// Reflected reduction. Input: q1:q0.
@@ -191,8 +191,7 @@
 	veor q0, q0, q1
 	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2) ^ (d0 >> 7)
 	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2) ^ (d1 >> 7)
-	veor q0, q0, q9
-	//Output: q0
+	veor q2, q0, q9
 .endm
 
 #ifndef AC_GCM_REFLC
@@ -262,6 +261,7 @@ ac_gcm_ghash_low:
 	vldm r1, {q3}
 	vmov.i64 d17, #0x00000000FFFFFFFF
 	vmov.i64 d16, #0x000000000000FFFF
+	veor d20, d6, d7
 
 	ghash_block:
 	// Load input
@@ -274,7 +274,6 @@ ac_gcm_ghash_low:
 	// Y' = (in ^ Y) * H
 	mul128_p8
 	rrdc
-	vmov q2, q0
 
 	subs r3, #16
 	bne ghash_block
