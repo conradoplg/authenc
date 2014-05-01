@@ -1,11 +1,20 @@
 .arm
 .align
-.globl ac_gcm_mul_low
 .globl ac_gcm_convert_low
 .globl ac_gcm_ghash_low
 
-#define AC_GCM_REFLC
-
+/**
+ * Binary 64x64-bit polynomial multiplication.
+ *
+ * Clobbers t0q, t1q, t2q, t3q.
+ *
+ * @param[in] ad		First operand.
+ * @param[in] bd		Second operand.
+ * @param[in] k16		The constant #0x000000000000FFFF
+ * @param[in] k32		The constant #0x00000000FFFFFFFF
+ * @param[in] k48		The constant #0x0000FFFFFFFFFFFF
+ * @param[out] rq		The result ad * bd
+ */
 .macro mul64_p8 rq rl rh ad bd k16 k32 k48 t0q t0l t0h t1q t1l t1h t2q t2l t2h t3q t3l t3h
 	@A1
 	vext.8  \t0l, \ad, \ad, $1
@@ -69,9 +78,9 @@
 .endm
 
 /**
- * Binary polynomial multiplication.
+ * Binary 128x128-bit polynomial multiplication.
  *
- * Clobbers d0-d7, d16-d18,d20-d31
+ * Clobbers d16-d18, d20-d31
  *
  * @param[in] q2		First operand.
  * @param[in] q3		Second operand.
@@ -93,9 +102,9 @@
 .endm
 
 /**
- * GCM reduction (modulo z^128 + z^7 + z^2 + z + 1)
+ * GCM reduction (modulo z^128 + z^7 + z^2 + z + 1).
  *
- * Clobbers q0-q3,q8-q9,d30
+ * Clobbers q2-q3, q8-q9, d30.
  *
  * @param[in] q1:q0		The number polynomial to be reduced.
  * @param[out] q0		The reduced value.
@@ -144,7 +153,7 @@
 /**
  * Reflected GCM reduction.
  *
- * Clobbers q0,q1,q8,q9
+ * Clobbers q0, q1, q8, q9.
  *
  * @param[in] q1:q0		The number polynomial to be reduced.
  * @param[out] q2		The reduced value.
@@ -194,54 +203,6 @@
 	veor q2, q0, q9
 .endm
 
-#ifndef AC_GCM_REFLC
-
-ac_gcm_mul_low:
-	vld1.32 {d4,d5}, [r1]
-	vld1.32 {d6,d7}, [r2]
-
-	vmov.i64 d18, #0x0000FFFFFFFFFFFF
-	vmov.i64 d17, #0x00000000FFFFFFFF
-	vmov.i64 d16, #0x000000000000FFFF
-
-	mul128_p8
-
-	rdc
-
-	vst1.32 {d0,d1}, [r0]
-
-	bx lr
-
-ac_gcm_convert_low:
-	ldm r1, {r1, r2, r3, ip}
-	rbit r1, r1
-	rbit r2, r2
-	rbit r3, r3
-	rbit ip, ip
-	rev r1, r1
-	rev r2, r2
-	rev r3, r3
-	rev ip, ip
-	stm r0, {r1, r2, r3, ip}
-	bx lr
-
-#else
-
-ac_gcm_mul_low:
-	vld1.32 {d4,d5}, [r1]
-	vld1.32 {d6,d7}, [r2]
-
-	vmov.i64 d18, #0x0000FFFFFFFFFFFF
-	vmov.i64 d17, #0x00000000FFFFFFFF
-	vmov.i64 d16, #0x000000000000FFFF
-
-	mul128_p8
-
-	rrdc
-
-	vst1.32 {d0,d1}, [r0]
-
-	bx lr
 
 ac_gcm_convert_low:
 	vld1.32 {q0}, [r1]
@@ -281,6 +242,3 @@ ac_gcm_ghash_low:
 	vstm r0, {q2}
 
 	bx lr
-
-
-#endif

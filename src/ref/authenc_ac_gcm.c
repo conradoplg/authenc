@@ -124,7 +124,7 @@ void ac_gcm_convert_low(unsigned char *c, const unsigned char *a);
  * @param[in,out] last_y	- input: last Y value. Output: new Y value.
  * @param[in] table			- the precomputed H table.
  * @param[in] input			- the input.
- * @param[in] len			- the input length.
+ * @param[in] len			- the input length. Must be a multiple of AC_GCM_BLOCK_LEN.
  */
 void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned char *input, size_t len);
 
