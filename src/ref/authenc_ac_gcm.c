@@ -293,7 +293,7 @@ errno_t ac_gcm_enc(ac_gcm_ctx_t ctx, unsigned char *output, size_t *output_len, 
 	}
 	*output_len = input_len + AC_GCM_TAG_LEN;
 
-	if (data_len && data) {
+	if (data && data_len) {
 		ac_gcm_data_low(ctx, data, data_len);
 	}
 	if (input && input_len) {
@@ -332,10 +332,10 @@ errno_t ac_gcm_dec(ac_gcm_ctx_t ctx, unsigned char *output, size_t *output_len, 
 	}
 	*output_len = input_len - AC_GCM_TAG_LEN;
 
-	if (data_len && data) {
+	if (data && data_len) {
 		ac_gcm_data_low(ctx, data, data_len);
 	}
-	if (input && input_len) {
+	if (input && *output_len) {
 		ac_gcm_dec_low(ctx, output, input, *output_len);
 		input += *output_len;
 	}
