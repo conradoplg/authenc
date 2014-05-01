@@ -68,23 +68,23 @@
 .endm
 
 /**
- * Binary polyonmial multiplication.
+ * Binary polynomial multiplication.
  *
- * Clobbers d0-d7, d12-d14, d24-d31
+ * Clobbers d0-d7, d16-d18, d24-d31
  *
  * @param[in] q2		First operand.
  * @param[in] q3		Second operand.
- * @param[in] d12		The constant #0x000000000000FFFF
- * @param[in] d13		The constant #0x00000000FFFFFFFF
- * @param[in] d14		The constant #0x0000FFFFFFFFFFFF
+ * @param[in] d16		The constant #0x000000000000FFFF
+ * @param[in] d17		The constant #0x00000000FFFFFFFF
+ * @param[in] d18		The constant #0x0000FFFFFFFFFFFF
  * @param[out] q1:q0	The result q2 * q3.
  */
 .macro mul128_p8
-	mul64_p8 q0, d0, d1, d4, d6, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	mul64_p8 q1, d2, d3, d5, d7, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
+	mul64_p8 q0, d0, d1, d4, d6, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
+	mul64_p8 q1, d2, d3, d5, d7, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	veor d6, d7
 	veor d7, d4, d5
-	mul64_p8 q2, d4, d5, d6, d7, d12, d13, d14, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
+	mul64_p8 q2, d4, d5, d6, d7, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
 	veor q2, q0
 	veor q2, q1
 	veor d1, d4
@@ -200,9 +200,9 @@ ac_gcm_mul_low:
 	vld1.32 {d4,d5}, [r1]
 	vld1.32 {d6,d7}, [r2]
 
-	vmov.i64 d14, #0x0000FFFFFFFFFFFF
-	vmov.i64 d13, #0x00000000FFFFFFFF
-	vmov.i64 d12, #0x000000000000FFFF
+	vmov.i64 d18, #0x0000FFFFFFFFFFFF
+	vmov.i64 d17, #0x00000000FFFFFFFF
+	vmov.i64 d16, #0x000000000000FFFF
 
 	mul128_p8
 
@@ -231,9 +231,9 @@ ac_gcm_mul_low:
 	vld1.32 {d4,d5}, [r1]
 	vld1.32 {d6,d7}, [r2]
 
-	vmov.i64 d14, #0x0000FFFFFFFFFFFF
-	vmov.i64 d13, #0x00000000FFFFFFFF
-	vmov.i64 d12, #0x000000000000FFFF
+	vmov.i64 d18, #0x0000FFFFFFFFFFFF
+	vmov.i64 d17, #0x00000000FFFFFFFF
+	vmov.i64 d16, #0x000000000000FFFF
 
 	mul128_p8
 
