@@ -111,6 +111,7 @@ static errno_t test_ac(void) {
 		cipher[j/8] ^= (1 << (cipher_len % 8));
 		err = ac_gcm_dec(ctx, computed_msg, &dec_msg_len, sizeof(computed_msg), cipher, cipher_len, msg, msg_len, iv, sizeof(iv));
 		assert(err != AUTHENC_OK);
+        err = AUTHENC_OK;
 		cipher[j/8] ^= (1 << (cipher_len % 8));
 	}
 
@@ -140,7 +141,7 @@ errno_t test_supercop(void) {
 	return err;
 }
 
-int main(void) {
+int test_ac_gcm(void) {
 	if (test_gcm() != AUTHENC_OK) {
 		return 1;
 	}
@@ -152,4 +153,8 @@ int main(void) {
 	}
 	puts("OK!");
 	return 0;
+}
+
+int main(void) {
+    return test_ac_gcm();
 }

@@ -1,7 +1,9 @@
 .arm
-.align
+.align 4
 .globl ac_gcm_convert_low
+.globl _ac_gcm_convert_low
 .globl ac_gcm_ghash_low
+.globl _ac_gcm_ghash_low
 
 /**
  * Binary 64x64-bit polynomial multiplication.
@@ -205,6 +207,7 @@
 
 
 ac_gcm_convert_low:
+_ac_gcm_convert_low:
 	vld1.32 {q0}, [r1]
 	vrev64.8 q0, q0
 	vswp d0, d1
@@ -213,6 +216,7 @@ ac_gcm_convert_low:
 
 
 ac_gcm_ghash_low:
+_ac_gcm_ghash_low:
 	teq r3, #0
 	bxeq lr
 	// Load old Y

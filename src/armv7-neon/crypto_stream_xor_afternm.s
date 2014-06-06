@@ -44,7 +44,7 @@
 # qhasm: reg128 caller_q7
 
 # qhasm: startcode
-.fpu neon
+//.fpu neon
 .text
 
 # qhasm: reg128 in0
@@ -192,7 +192,8 @@ crypto_stream_aes128ctr_neon_xor_afternm_constants:
 vpush {q4,q5,q6,q7}
 mov r12,sp
 sub sp,sp,#320
-and sp,sp,#0xffffffe0
+//and sp,sp,#0xffffffe0
+bic sp,sp,#0x1f
 
 # qhasm: stack64 stack_r45
 
@@ -201,12 +202,12 @@ and sp,sp,#0xffffffe0
 # qhasm: assign r4 r5 to caller_r4 caller_r5;stack_r45 = caller_r4 caller_r5
 # asm 1: strd <caller_r4=int32#5,>stack_r45=stack64#1
 # asm 2: strd <caller_r4=r4,>stack_r45=[sp,#0]
-strd r4,[sp,#0]
+strd r4,r5,[sp,#0]
 
 # qhasm: assign r6 r7 to caller_r6 caller_r7;stack_r67 = caller_r6 caller_r7
 # asm 1: strd <caller_r6=int32#7,>stack_r67=stack64#2
 # asm 2: strd <caller_r6=r6,>stack_r67=[sp,#8]
-strd r6,[sp,#8]
+strd r6,r7,[sp,#8]
 
 # qhasm: np = input_4
 # asm 1: ldr >np=int32#4,<input_4=stack32#arg17
@@ -12394,12 +12395,12 @@ vst1.8 {d4-d5},[r0]!
 # qhasm: assign r4 r5 to caller_r4 caller_r5 = stack_r45
 # asm 1: ldrd >caller_r4=int32#5,<stack_r45=stack64#1
 # asm 2: ldrd >caller_r4=r4,<stack_r45=[sp,#0]
-ldrd r4,[sp,#0]
+ldrd r4,r5,[sp,#0]
 
 # qhasm: assign r6 r7 to caller_r6 caller_r7 = stack_r67
 # asm 1: ldrd >caller_r6=int32#7,<stack_r67=stack64#2
 # asm 2: ldrd >caller_r6=r6,<stack_r67=[sp,#8]
-ldrd r6,[sp,#8]
+ldrd r6,r7,[sp,#8]
 
 # qhasm: qpopreturn
 mov sp,r12
