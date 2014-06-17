@@ -17,10 +17,19 @@ errno_t sc_aesctr_enc(sc_aesctr_ctx_t ctx, unsigned char *output,
 		const unsigned char *input, size_t input_len,
 		const unsigned char *nonce, size_t nonce_len)
 {
+    size_t leftover_len;
+    
 	if (nonce_len != SC_AESCTR_IV_LEN) {
 		return AUTHENC_ERR_INVALID_PARAMETER;
 	}
-
-	sc_aesctr_enc_low(output, input, input_len, nonce, ctx->aes_ctx->ekey);
+    
+    leftover_len = input_len % 16;
+	sc_aesctr_enc_low(output, input, input_len - leftover_len, nonce, ctx->aes_ctx->ekey);
+    if (leftover_len > 0) {
+        unsigned char full_input[16], full_output[16];
+        memcpy(full_input, input + input_len - leftover_len, leftover_len);
+        sc_aesctr_enc_low(full_output, full_input, 16, nonce, ctx->aes_ctx->ekey);
+        memcpy(output + input_len - leftover_len, full_output, leftover_len);
+    }
 	return AUTHENC_OK;
 }

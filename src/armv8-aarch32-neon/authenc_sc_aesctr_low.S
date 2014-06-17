@@ -23,15 +23,20 @@ _sc_aesctr_enc_low:
     //r2 = input_len
     //r3 = nonce
     //r12 = ekey
+    teq r2, #0
+	bxeq lr
     ldr r12, [sp]
+    vpush {q4-q5}
 
-    //q0 = counter
-    vld1.64 {q0}, [r3]
+    //q5 = counter
+    vld1.64 {q5}, [r3]
 
     //load expanded key
     vldm r12!, {q8-q15}
     vldm r12, {q1-q3}
 
+full_block:
+    vmov q0, q5
     AESE(0, 8)
     AESMC(0, 0)
     AESE(0, 9)
@@ -54,12 +59,23 @@ _sc_aesctr_enc_low:
     veor q0, q3
 
     //load input
-    vld1.64 {q1}, [r1]
+    vld1.64 {q4}, [r1]!
 
     //encrypt
-    veor q1, q0
+    veor q4, q0
 
     //store
-    vst1.64 {q1}, [r0]
+    vst1.64 {q4}, [r0]!
 
+    //increment
+    vmov.32 r12, d11[1]
+    rev r12, r12
+    add r12, #1
+    rev r12, r12
+    vmov.32 d11[1], r12
+
+    subs r2, #16
+	bne full_block
+
+    vpop {q4-q5}
     bx lr
