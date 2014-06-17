@@ -6,14 +6,6 @@
 
 #include "authenc_errors.h"
 
-void dump(const void *p, int len) { const unsigned char *a = p; int i; for (i = 0; i < len; i++) { printf("%02X", a[i]); } puts(""); }
-int crypto_stream_xor(
-        unsigned char *out,
-        const unsigned char *in,
-        unsigned long long inlen,
-        const unsigned char *n,
-        const unsigned char *k
-        );
 static errno_t test_aes128ctr(void) {
 	errno_t err = AUTHENC_OK;
 	unsigned char keys[][BC_AES128_KEY_LEN] = {
