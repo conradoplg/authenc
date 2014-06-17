@@ -38,10 +38,15 @@ _sc_aesctr_enc_low:
 full_block:
     vmov q0, q5
     AESE(0, 8)
+    vmov.32 r12, d11[1]
     AESMC(0, 0)
+    rev r12, r12
     AESE(0, 9)
+    add r12, #1
     AESMC(0, 0)
+    rev r12, r12
     AESE(0, 10)
+    vmov.32 d11[1], r12
     AESMC(0, 0)
     AESE(0, 11)
     AESMC(0, 0)
@@ -66,13 +71,6 @@ full_block:
 
     //store
     vst1.64 {q4}, [r0]!
-
-    //increment
-    vmov.32 r12, d11[1]
-    rev r12, r12
-    add r12, #1
-    rev r12, r12
-    vmov.32 d11[1], r12
 
     subs r2, #16
 	bne full_block
