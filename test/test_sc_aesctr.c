@@ -47,10 +47,14 @@ static errno_t test_aes128ctr(void) {
 	return err;
 }
 
-int main(void) {
+int test_sc_aesctr(void) {
 	if (test_aes128ctr() != AUTHENC_OK) {
 		return 1;
 	}
 	puts("OK!");
 	return 0;
+}
+
+int main(void) {
+    return test_sc_aesctr();
 }
