@@ -23,14 +23,14 @@ errno_t sc_aesctr_enc(sc_aesctr_ctx_t ctx, unsigned char *output,
 		return AUTHENC_ERR_INVALID_PARAMETER;
 	}
     
-    leftover_len = input_len % 16;
+    leftover_len = input_len % 32;
 	sc_aesctr_enc_low(output, input, input_len - leftover_len, nonce, ctx->aes_ctx->ekey);
     if (leftover_len > 0) {
-        unsigned char full_input[16], full_output[16], new_nonce[16];
+        unsigned char full_input[32], full_output[32], new_nonce[16];
         memcpy(new_nonce, nonce, sizeof(new_nonce));
-        authenc_inc32(new_nonce, input_len / 16, sizeof(new_nonce));
+        authenc_inc32(new_nonce, input_len / 32, sizeof(new_nonce));
         memcpy(full_input, input + input_len - leftover_len, leftover_len);
-        sc_aesctr_enc_low(full_output, full_input, 16, nonce, ctx->aes_ctx->ekey);
+        sc_aesctr_enc_low(full_output, full_input, 32, nonce, ctx->aes_ctx->ekey);
         memcpy(output + input_len - leftover_len, full_output, leftover_len);
     }
 	return AUTHENC_OK;
