@@ -5,79 +5,10 @@
 .globl ac_gcm_ghash_low
 .globl _ac_gcm_ghash_low
 
-/**
- * Binary 64x64-bit polynomial multiplication.
- *
- * Clobbers t0q, t1q, t2q, t3q.
- *
- * @param[in] ad		First operand.
- * @param[in] bd		Second operand.
- * @param[in] k16		The constant #0x000000000000FFFF
- * @param[in] k32		The constant #0x00000000FFFFFFFF
- * @param[in] k48		The constant #0x0000FFFFFFFFFFFF
- * @param[out] rq		The result ad * bd
- */
-.macro mul64_p8 rq rl rh ad bd k16 k32 k48 t0q t0l t0h t1q t1l t1h t2q t2l t2h t3q t3l t3h
-	@A1
-	vext.8  \t0l, \ad, \ad, $1
-	@F = A1*B
-	vmull.p8 \t0q, \t0l, \bd
-	@B1
-	vext.8  \rl, \bd, \bd, $1
-	@E = A*B1 (7)
-	vmull.p8 \rq, \ad, \rl
-		@A2
-		vext.8  \t1l, \ad, \ad, $2
-		@H = A2*B
-		vmull.p8 \t1q, \t1l, \bd
-		@B2
-		vext.8  \t3l, \bd, \bd, $2
-		@G = A*B2
-		vmull.p8 \t3q, \ad, \t3l
-			@A3
-			vext.8  \t2l, \ad, \ad, $3
-			@J = A3*B
-			vmull.p8 \t2q, \t2l, \bd
-	@L = E + F
-	veor	\t0q, \t0q, \rq
-			@B3
-			vext.8  \rl, \bd, \bd, $3
-			@I = A*B3
-			vmull.p8 \rq, \ad, \rl
-		@M = G + H
-		veor	\t1q, \t1q, \t3q
-				@B4
-				vext.8  \t3l, \bd, \bd, $4
-				@K = A*B4
-				vmull.p8 \t3q, \ad, \t3l
-	@t0 = (L) (P0 + P1) << 8
-	veor	\t0l, \t0l, \t0h
-	vand	\t0h, \t0h, \k48
-		@t1 = (M) (P2 + P3) << 16
-		veor	\t1l, \t1l, \t1h
-		vand	\t1h, \t1h, \k32
-			@N = I + J
-			veor	\t2q, \t2q, \rq
-	veor	\t0l, \t0l, \t0h
-		veor	\t1l, \t1l, \t1h
-			@t2 = (N) (P4 + P5) << 24
-			veor	\t2l, \t2l, \t2h
-			vand	\t2h, \t2h, \k16
-				@t3 = (K) (P6 + P7) << 32
-				veor	\t3l, \t3l, \t3h
-				vmov.i64 \t3h, $0
-	vext.8  \t0q, \t0q, \t0q, $15
-			veor	\t2l, \t2l, \t2h
-		vext.8  \t1q, \t1q, \t1q, $14
-				vmull.p8 \rq, \ad, \bd
-			vext.8  \t2q, \t2q, \t2q, $13
-				vext.8  \t3q, \t3q, \t3q, $12
-	veor	\t0q, \t0q, \t1q
-	veor	\t2q, \t2q, \t3q
-	veor	\rq, \rq, \t0q
-	veor	\rq, \rq, \t2q
-
-.endm
+#define VMULLP64(d, n, m) .word (0b11110010101000000000111000000000 \
+ | (m & 0xF) | ((m & 0x10) << 1) \
+ | ((n & 0xF) << 16) | ((n & 0x10) << 3) \
+ | ((d & 0x7) << 13) | ((d & 0x8) << 19) )
 
 /**
  * Binary 128x128-bit polynomial multiplication.
@@ -92,11 +23,11 @@
  * @param[out] q1:q0	The result q2 * q3.
  */
 .macro mul128_p8
-	mul64_p8 q0, d0, d1, d4, d6, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
-	mul64_p8 q1, d2, d3, d5, d7, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
+    VMULLP64(0, 4, 6)
+    VMULLP64(1, 5, 7)
 	//veor d20, d6, d7
 	veor d21, d4, d5
-	mul64_p8 q11, d22, d23, d20, d21, d16, d17, d18, q12, d24, d25, q13, d26, d27, q14, d28, d29, q15, d30, d31
+    VMULLP64(11, 20, 21)
 	veor q11, q0
 	veor q11, q1
 	veor d1, d22
@@ -221,11 +152,8 @@ _ac_gcm_ghash_low:
 	bxeq lr
 	// Load old Y
 	vldm r0, {q2}
-	vmov.i64 d18, #0x0000FFFFFFFFFFFF
 	// Load H
 	vldm r1, {q3}
-	vmov.i64 d17, #0x00000000FFFFFFFF
-	vmov.i64 d16, #0x000000000000FFFF
 	veor d20, d6, d7
 
 	ghash_block:
