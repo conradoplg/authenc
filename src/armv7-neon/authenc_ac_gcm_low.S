@@ -82,7 +82,7 @@
 /**
  * Binary 128x128-bit polynomial multiplication.
  *
- * Clobbers d16-d18, d20-d31
+ * Clobbers d16-d18, d21-d31
  *
  * @param[in] q2		First operand.
  * @param[in] q3		Second operand.
@@ -155,45 +155,45 @@
 /**
  * Reflected GCM reduction.
  *
- * Clobbers q0, q1, q8, q9.
+ * Clobbers q0, q1, q14, q15.
  *
  * @param[in] q1:q0		The number polynomial to be reduced.
  * @param[out] q2		The reduced value.
  */
 .macro rrdc
 	// Reflected reduction. Input: q1:q0.
-	//d16 = d0 << 57
-	//d17 = d1 << 57
-	vshl.i64 q8, q0, #57
-	//d18 = d0 << 62
-	//d19 = d1 << 62
-	vshl.i64 q9, q0, #62
-	//d18 = (d0 << 62) ^ (d0 << 57)
-	//d19 = (d1 << 62) ^ (d1 << 57)
-	veor q9, q9, q8
-	//d16 = (d0 << 63)
-	//d17 = (d1 << 63)
-	vshl.i64 q8, q0, #63
-	//d18 = (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
-	//d19 = (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor q9, q9, q8
+	//d28 = d0 << 57
+	//d29 = d1 << 57
+	vshl.i64 q14, q0, #57
+	//d30 = d0 << 62
+	//d31 = d1 << 62
+	vshl.i64 q15, q0, #62
+	//d30 = (d0 << 62) ^ (d0 << 57)
+	//d31 = (d1 << 62) ^ (d1 << 57)
+	veor q15, q15, q14
+	//d28 = (d0 << 63)
+	//d29 = (d1 << 63)
+	vshl.i64 q14, q0, #63
+	//d30 = (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
+	//d31 = (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
+	veor q15, q15, q14
 	//d1 = d1 ^ (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
-	veor d1, d1, d18
+	veor d1, d1, d30
 	//d2 = d2 ^ (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor d2, d2, d19
+	veor d2, d2, d31
 
-	//d18 = d0 >> 1
-	//d19 = d1 >> 1
-	vshr.u64 q9, q0, #1
+	//d30 = d0 >> 1
+	//d31 = d1 >> 1
+	vshr.u64 q15, q0, #1
 	//d2' = d2 ^ d0
 	//d3' = d3 ^ d1
 	veor q1, q1, q0
 	//d0' = d0 ^ (d0 >> 1)
 	//d1' = d1 ^ (d1 >> 1)
-	veor q0, q0, q9
-	//d18 = (d0 >> 7)
-	//d19 = (d1 >> 7)
-	vshr.u64 q9, q9, #6
+	veor q0, q0, q15
+	//d30 = (d0 >> 7)
+	//d31 = (d1 >> 7)
+	vshr.u64 q15, q15, #6
 	//d0' = (d0 >> 1) ^ (d0 >> 2)
 	//d1' = (d1 >> 1) ^ (d1 >> 2)
 	vshr.u64 q0, q0, #1
@@ -202,7 +202,7 @@
 	veor q0, q0, q1
 	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2) ^ (d0 >> 7)
 	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2) ^ (d1 >> 7)
-	veor q2, q0, q9
+	veor q2, q0, q15
 .endm
 
 

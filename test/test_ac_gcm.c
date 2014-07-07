@@ -21,7 +21,7 @@ static errno_t test_gcm(void) {
 	unsigned char key[SC_AES128CTR_KEY_LEN];
 	unsigned char iv[AC_GCM_IV_LEN];
 	authenc_align unsigned char msg[AC_GCM_BLOCK_LEN];
-	authenc_align unsigned char cipher[AC_GCM_BLOCK_LEN + AC_GCM_TAG_LEN];
+	authenc_align unsigned char cipher[2 * AC_GCM_BLOCK_LEN + AC_GCM_TAG_LEN];
 	unsigned char tag[AC_GCM_TAG_LEN];
 	ac_gcm_ctx_at ctx;
 	size_t len;
@@ -31,8 +31,10 @@ static errno_t test_gcm(void) {
 		unsigned char tag_ref[] = { 0x58, 0xe2, 0xfc, 0xce, 0xfa, 0x7e, 0x30, 0x61, 0x36, 0x7f, 0x1d, 0x57, 0xa4, 0xe7, 0x45, 0x5a };
 		memset(key, 0, sizeof(key));
 		memset(iv, 0, sizeof(iv));
-		ac_gcm_key(ctx, key, sizeof(key));
-		ac_gcm_enc(ctx, tag, &len, sizeof(tag), NULL, 0, NULL, 0, iv, sizeof(iv));
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_enc(ctx, tag, &len, sizeof(tag), NULL, 0, NULL, 0, iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
 		assert(memcmp(tag, tag_ref, sizeof(tag)) == 0);
 	}
 
@@ -43,10 +45,36 @@ static errno_t test_gcm(void) {
 		memset(key, 0, sizeof(key));
 		memset(iv, 0, sizeof(iv));
 		memset(msg, 0, sizeof(msg));
-		ac_gcm_key(ctx, key, sizeof(key));
-		ac_gcm_enc(ctx, cipher, &len, sizeof(cipher), msg, sizeof(msg), NULL, 0, iv, sizeof(iv));
-		assert(memcmp(cipher, cipher_ref, AC_GCM_BLOCK_LEN) == 0);
-		assert(memcmp(cipher + AC_GCM_BLOCK_LEN, tag_ref, AC_GCM_TAG_LEN) == 0);
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_enc(ctx, cipher, &len, sizeof(cipher), msg, sizeof(msg), NULL, 0, iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
+		assert(len == sizeof(cipher_ref) + sizeof(tag_ref));
+		assert(memcmp(cipher, cipher_ref, sizeof(cipher_ref)) == 0);
+		assert(memcmp(cipher + sizeof(cipher_ref), tag_ref, sizeof(tag_ref)) == 0);
+	}
+
+	puts("GCM passes test vector A?");
+	{
+		const unsigned char key[] = { 0x29, 0x8e, 0xfa, 0x1c, 0xcf, 0x29, 0xcf, 0x62, 0xae, 0x68, 0x24, 0xbf, 0xc1, 0x95, 0x57, 0xfc };
+		const unsigned char iv[] = { 0x6f, 0x58, 0xa9, 0x3f, 0xe1, 0xd2, 0x07, 0xfa, 0xe4, 0xed, 0x2f, 0x6d };
+		const unsigned char msg[] = { 0xcc, 0x38, 0xbc, 0xcd, 0x6b, 0xc5, 0x36, 0xad, 0x91, 0x9b, 0x13, 0x95,
+				  0xf5, 0xd6, 0x38, 0x01, 0xf9, 0x9f, 0x80, 0x68, 0xd6, 0x5c, 0xa5, 0xac,
+				  0x63, 0x87, 0x2d, 0xaf, 0x16, 0xb9, 0x39, 0x01 };
+		const unsigned char data[] = { 0x02, 0x1f, 0xaf, 0xd2, 0x38, 0x46, 0x39, 0x73, 0xff, 0xe8, 0x02, 0x56,
+				  0xe5, 0xb1, 0xc6, 0xb1 };
+		const unsigned char cipher_ref[] = { 0xdf, 0xce, 0x4e, 0x9c, 0xd2, 0x91, 0x10, 0x3d, 0x7f, 0xe4, 0xe6, 0x33,
+				  0x51, 0xd9, 0xe7, 0x9d, 0x3d, 0xfd, 0x39, 0x1e, 0x32, 0x67, 0x10, 0x46,
+				  0x58, 0x21, 0x2d, 0xa9, 0x65, 0x21, 0xb7, 0xdb };
+		const unsigned char tag_ref[] = { 0x54, 0x24, 0x65, 0xef, 0x59, 0x93, 0x16, 0xf7, 0x3a, 0x7a, 0x56, 0x05,
+				  0x09, 0xa2, 0xd9, 0xf2 };
+		err = ac_gcm_key(ctx, key, sizeof(key));
+		assert(err == AUTHENC_OK);
+		err = ac_gcm_enc(ctx, cipher, &len, sizeof(cipher), msg, sizeof(msg), data, sizeof(data), iv, sizeof(iv));
+		assert(err == AUTHENC_OK);
+		assert(len == sizeof(cipher_ref) + sizeof(tag_ref));
+		assert(memcmp(cipher, cipher_ref, sizeof(cipher_ref)) == 0);
+		assert(memcmp(cipher + sizeof(cipher_ref), tag_ref, sizeof(tag_ref)) == 0);
 	}
 
 	return err;
