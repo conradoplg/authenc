@@ -10,9 +10,16 @@
  | ((n & 0xF) << 16) | ((n & 0x10) << 3) \
  | ((d & 0x7) << 13) | ((d & 0x8) << 19) )
 
+.macro vmull_p64 d, n, m
+    .word (0b11110010101000000000111000000000 \
+    | (\m & 0xF) | ((\m & 0x10) << 1) \
+    | ((\n & 0xF) << 16) | ((\n & 0x10) << 3) \
+    | ((\d & 0x7) << 13) | ((\d & 0x8) << 19) )
+.endm
+
 /**
  * Binary 128x128-bit polynomial multiplication.
- *
+ * TODO: update
  * Clobbers d21-23.
  *
  * @param[in] q2		First operand.
@@ -20,16 +27,16 @@
  * @param[in] d20       Precomputed d6 + d7
  * @param[out] q1:q0	The result q2 * q3.
  */
-.macro mul128_p8
-    VMULLP64(0, 4, 6)
-    VMULLP64(1, 5, 7)
-	//veor d20, d6, d7
-	veor d21, d4, d5
-    VMULLP64(11, 20, 21)
-	veor q11, q0
-	veor q11, q1
-	veor d1, d22
-	veor d2, d23
+.macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, dd, ddn, t0d, t0dn, t1q, t1qn
+    vmull_p64 \r0qn, \aln, \bln
+    vmull_p64 \r1qn, \ahn, \bhn
+	//veor \dd, \bl, \bh
+	veor \t0d, \al, \ah
+    vmull_p64 \t1qn, \ddn, \t0dn
+	veor \t1q, \r0q
+	veor \t1q, \r1q
+	veor \r0h, d22
+	veor \r1l, d23
 .endm
 
 /**
@@ -163,7 +170,8 @@ _ac_gcm_ghash_low:
 	// Y' = in ^ Y
 	veor q2, q0
 	// Y' = (in ^ Y) * H
-	mul128_p8
+    //mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, dd, ddn, t0d, t0dn, t1q, t1qn
+	mul128_p64 q0, 0, d0, d1, q1, 1, d2, d3, d4, 4, d5, 5, d6, 6, d7, 7, d20, 20, d21, 21, q11, 11
 	rrdc
 
 	subs r3, #16
