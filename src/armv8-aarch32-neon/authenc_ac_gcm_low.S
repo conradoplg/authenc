@@ -13,13 +13,11 @@
 /**
  * Binary 128x128-bit polynomial multiplication.
  *
- * Clobbers d16-d18, d20-d31
+ * Clobbers d21-23.
  *
  * @param[in] q2		First operand.
  * @param[in] q3		Second operand.
- * @param[in] d16		The constant #0x000000000000FFFF
- * @param[in] d17		The constant #0x00000000FFFFFFFF
- * @param[in] d18		The constant #0x0000FFFFFFFFFFFF
+ * @param[in] d20       Precomputed d6 + d7
  * @param[out] q1:q0	The result q2 * q3.
  */
 .macro mul128_p8
