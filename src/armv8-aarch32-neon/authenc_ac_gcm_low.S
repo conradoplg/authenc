@@ -4,6 +4,8 @@
 .globl _ac_gcm_convert_low
 .globl ac_gcm_ghash_low
 .globl _ac_gcm_ghash_low
+.globl ac_gcm_mul_low
+.globl _ac_gcm_mul_low
 
 #define VMULLP64(d, n, m) .word (0b11110010101000000000111000000000 \
  | (m & 0xF) | ((m & 0x10) << 1) \
@@ -27,7 +29,7 @@
  * @param[in] d20       Precomputed d6 + d7
  * @param[out] q1:q0	The result q2 * q3.
  */
-.macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, dd, ddn, t0d, t0dn, t1q, t1qn
+.macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, dd, ddn, t0d, t0dn, t1q, t1qn, t1l, t1h
     vmull_p64 \r0qn, \aln, \bln
     vmull_p64 \r1qn, \ahn, \bhn
 	//veor \dd, \bl, \bh
@@ -35,8 +37,8 @@
     vmull_p64 \t1qn, \ddn, \t0dn
 	veor \t1q, \r0q
 	veor \t1q, \r1q
-	veor \r0h, d22
-	veor \r1l, d23
+	veor \r0h, \t1l
+	veor \r1l, \t1h
 .endm
 
 /**
@@ -90,55 +92,55 @@
 
 /**
  * Reflected GCM reduction.
- *
+ * TODO: update
  * Clobbers q0, q1, q8, q9.
  *
  * @param[in] q1:q0		The number polynomial to be reduced.
  * @param[out] q2		The reduced value.
  */
-.macro rrdc
-	// Reflected reduction. Input: q1:q0.
-	//d16 = d0 << 57
-	//d17 = d1 << 57
-	vshl.i64 q8, q0, #57
-	//d18 = d0 << 62
-	//d19 = d1 << 62
-	vshl.i64 q9, q0, #62
-	//d18 = (d0 << 62) ^ (d0 << 57)
-	//d19 = (d1 << 62) ^ (d1 << 57)
-	veor q9, q9, q8
-	//d16 = (d0 << 63)
-	//d17 = (d1 << 63)
-	vshl.i64 q8, q0, #63
-	//d18 = (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
-	//d19 = (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor q9, q9, q8
-	//d1 = d1 ^ (d0 << 62) ^ (d0 << 57) ^ (d0 << 63)
-	veor d1, d1, d18
-	//d2 = d2 ^ (d1 << 62) ^ (d1 << 57) ^ (d1 << 63)
-	veor d2, d2, d19
+.macro rrdc rq, a0q, a0l, a0h, a1q, a1l, a1h, t0q, t0l, t0h, t1q, t1l, t1h
+	// Reflected reduction. Input: \a1q:\a0q.
+	//\t0l = \a0l << 57
+	//\t0h = \a0h << 57
+	vshl.i64 \t0q, \a0q, #57
+	//\t1l = \a0l << 62
+	//\t1h = \a0h << 62
+	vshl.i64 \t1q, \a0q, #62
+	//\t1l = (\a0l << 62) ^ (\a0l << 57)
+	//\t1h = (\a0h << 62) ^ (\a0h << 57)
+	veor \t1q, \t1q, \t0q
+	//\t0l = (\a0l << 63)
+	//\t0h = (\a0h << 63)
+	vshl.i64 \t0q, \a0q, #63
+	//\t1l = (\a0l << 62) ^ (\a0l << 57) ^ (\a0l << 63)
+	//\t1h = (\a0h << 62) ^ (\a0h << 57) ^ (\a0h << 63)
+	veor \t1q, \t1q, \t0q
+	//\a0h = \a0h ^ (\a0l << 62) ^ (\a0l << 57) ^ (\a0l << 63)
+	veor \a0h, \a0h, \t1l
+	//\a1l = \a1l ^ (\a0h << 62) ^ (\a0h << 57) ^ (\a0h << 63)
+	veor \a1l, \a1l, \t1h
 
-	//d18 = d0 >> 1
-	//d19 = d1 >> 1
-	vshr.u64 q9, q0, #1
-	//d2' = d2 ^ d0
-	//d3' = d3 ^ d1
-	veor q1, q1, q0
-	//d0' = d0 ^ (d0 >> 1)
-	//d1' = d1 ^ (d1 >> 1)
-	veor q0, q0, q9
-	//d18 = (d0 >> 7)
-	//d19 = (d1 >> 7)
-	vshr.u64 q9, q9, #6
-	//d0' = (d0 >> 1) ^ (d0 >> 2)
-	//d1' = (d1 >> 1) ^ (d1 >> 2)
-	vshr.u64 q0, q0, #1
-	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2)
-	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2)
-	veor q0, q0, q1
-	//d0' = d2 ^ d0 ^ (d0 >> 1) ^ (d0 >> 2) ^ (d0 >> 7)
-	//d1' = d3 ^ d1 ^ (d1 >> 1) ^ (d1 >> 2) ^ (d1 >> 7)
-	veor q2, q0, q9
+	//\t1l = \a0l >> 1
+	//\t1h = \a0h >> 1
+	vshr.u64 \t1q, \a0q, #1
+	//\a1l' = \a1l ^ \a0l
+	//\a1h' = \a1h ^ \a0h
+	veor \a1q, \a1q, \a0q
+	//\a0l' = \a0l ^ (\a0l >> 1)
+	//\a0h' = \a0h ^ (\a0h >> 1)
+	veor \a0q, \a0q, \t1q
+	//\t1l = (\a0l >> 7)
+	//\t1h = (\a0h >> 7)
+	vshr.u64 \t1q, \t1q, #6
+	//\a0l' = (\a0l >> 1) ^ (\a0l >> 2)
+	//\a0h' = (\a0h >> 1) ^ (\a0h >> 2)
+	vshr.u64 \a0q, \a0q, #1
+	//\a0l' = \a1l ^ \a0l ^ (\a0l >> 1) ^ (\a0l >> 2)
+	//\a0h' = \a1h ^ \a0h ^ (\a0h >> 1) ^ (\a0h >> 2)
+	veor \a0q, \a0q, \a1q
+	//\a0l' = \a1l ^ \a0l ^ (\a0l >> 1) ^ (\a0l >> 2) ^ (\a0l >> 7)
+	//\a0h' = \a1h ^ \a0h ^ (\a0h >> 1) ^ (\a0h >> 2) ^ (\a0h >> 7)
+	veor \rq, \a0q, \t1q
 .endm
 
 
@@ -150,16 +152,20 @@ _ac_gcm_convert_low:
 	vst1.32 {q0}, [r0]
 	bx lr
 
-
 ac_gcm_ghash_low:
 _ac_gcm_ghash_low:
-	teq r3, #0
-	bxeq lr
+    teq r3, #0
+    bxeq lr
+
 	// Load old Y
-	vldm r0, {q2}
-	// Load H
-	vldm r1, {q3}
-	veor d20, d6, d7
+	vldm r0, {q8}
+	// Load H, H2
+    vldm r1, {q2-q3}
+    veor d20, d4, d5
+	veor d22, d6, d7
+
+	cmp r3, #31
+	bls leftover
 
 	ghash_block:
 	// Load input
@@ -167,15 +173,59 @@ _ac_gcm_ghash_low:
 	// Convert to GCM format
 	vrev64.8 q0, q0
 	vswp d0, d1
-	// Y' = in ^ Y
-	veor q2, q0
-	// Y' = (in ^ Y) * H
-    //mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, dd, ddn, t0d, t0dn, t1q, t1qn
-	mul128_p64 q0, 0, d0, d1, q1, 1, d2, d3, d4, 4, d5, 5, d6, 6, d7, 7, d20, 20, d21, 21, q11, 11
-	rrdc
+	// q8 = in0 ^ Y0
+	veor q8, q0
+	// q12-q13 = (in0 ^ Y0) * H^2
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d16, 16, d17, 17,  d6, 6, d7, 7,  d22, 22, d21, 21, q9, 9, d18, d19
+    // Load input
+	vld1.64 {q8}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q8, q8
+	vswp d16, d17
+	// q0-q1 = in1 * H
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q0, 0, d0, d1,  q1, 1, d2, d3,  d16, 16, d17, 17,  d4, 4, d5, 5,  d20, 20,  d21, 21, q9, 9, d18, d19
+    veor q0, q12
+    veor q1, q13
+    //rrdc rq, a0q, a0l, a0h, a1q, a1l, a1h, t0q, t0l, t0h, t1q, t1l, t1h
+	rrdc q8, q0, d0, d1, q1, d2, d3, q12, d24, d25, q13, d26, d27
 
-	subs r3, #16
-	bne ghash_block
+	sub r3, #32
+    cmp r3, #31
+    bhi ghash_block
+
+    leftover:
+    cmp r3, #0
+    beq finish
+    // Load input
+	vld1.64 {q0}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q0, q0
+	vswp d0, d1
+	// Y' = in ^ Y
+	veor q8, q0
+	// Y' = (in ^ Y) * H
+	mul128_p64 q0, 0, d0, d1,  q1, 1, d2, d3,  d16, 16, d17, 17,  d4, 4, d5, 5, d20, 20, d21, 21, q9, 9, d18, d19
+    vstm r0, {q0}
+    rrdc q8, q0, d0, d1, q1, d2, d3, q12, d24, d25, q13, d26, d27
+
+    finish:
+	vstm r0, {q8}
+
+	bx lr
+
+ac_gcm_mul_low:
+_ac_gcm_mul_low:
+	// Load B
+	vldm r2, {q3}
+	veor d20, d6, d7
+
+	// Load A
+	vld1.64 {q2}, [r1]!
+	// C = A * B
+    mul128_p64 q0, 0, d0, d1,  q1, 1, d2, d3,  d4, 4, d5, 5,  d6, 6, d7, 7,  d20, 20,  d21, 21,  q9, 9, d18, d19
+    rrdc q2, q0, d0, d1, q1, d2, d3, q12, d24, d25, q13, d26, d27
 
 	vstm r0, {q2}
 
