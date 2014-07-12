@@ -48,6 +48,7 @@ static void gcm_lsh_low(dig_t *t)
 void ac_gcm_tab_low(dig_t *t, unsigned char *h) {
 	authenc_align dig_t ah[AC_GCM_BLOCK_LEN / sizeof(dig_t)];
     const size_t len = AC_GCM_BLOCK_LEN / sizeof(dig_t);
+    int i;
 	
     //Make aligned copy.
     memcpy(ah, h, AC_GCM_BLOCK_LEN);
@@ -57,12 +58,12 @@ void ac_gcm_tab_low(dig_t *t, unsigned char *h) {
 	gcm_lsh_low(t);
     //H^2
 	ac_gcm_mul_low(t + len, ah, t);
-    //H^3
-    ac_gcm_mul_low(t + 2 * len, t + len, t);
-    //H^4
-    ac_gcm_mul_low(t + 3 * len, t + 2 * len, t);
+    //H^3 -- H^8
+    for (i = 2; i < 8; i++) {
+        ac_gcm_mul_low(t + i * len, t + (i - 1) * len, t);
+    }
     // << 1
-	gcm_lsh_low(t + len);
-    gcm_lsh_low(t + 2 * len);
-    gcm_lsh_low(t + 3 * len);
+    for (i = 1; i < 8; i++) {
+        gcm_lsh_low(t + i * len);
+    }
 }

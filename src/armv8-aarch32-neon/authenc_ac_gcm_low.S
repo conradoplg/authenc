@@ -32,7 +32,7 @@
 .macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, dd, ddn, t0d, t0dn, t1q, t1qn, t1l, t1h
     vmull_p64 \r0qn, \aln, \bln
     vmull_p64 \r1qn, \ahn, \bhn
-	//veor \dd, \bl, \bh
+	veor \dd, \bl, \bh
 	veor \t0d, \al, \ah
     vmull_p64 \t1qn, \ddn, \t0dn
 	veor \t1q, \r0q
@@ -156,17 +156,14 @@ ac_gcm_ghash_low:
 _ac_gcm_ghash_low:
     teq r3, #0
     bxeq lr
+    vpush {q4-q7}
 
 	// Load old Y
 	vldm r0, {q14}
-	// Load H, H2, H3, H4
-    vldm r1, {q0-q3}
-    veor d16, d0, d1
-	veor d17, d2, d3
-    veor d18, d4, d5
-    veor d19, d6, d7
+	// Load H^1--H^8
+    vldm r1, {q0-q7}
 
-	cmp r3, #63
+	cmp r3, #127
 	bls leftover
 
 	ghash_block:
@@ -177,18 +174,18 @@ _ac_gcm_ghash_low:
 	vswp d24, d25
 	// q8 = in0 ^ Y0
 	veor q14, q12
-	// q10-q11 = (in0 ^ Y0) * H^4
+	// q10-q11 = (in0 ^ Y0) * H^8
     //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
-	mul128_p64 q10, 10, d20, d21,  q11, 11, d22, d23,  d28, 28, d29, 29,  d6, 6, d7, 7,  d19, 19, d30, 30, q15, 15, d30, d31
+	mul128_p64 q10, 10, d20, d21,  q11, 11, d22, d23,  d28, 28, d29, 29,  d14, 14, d15, 15,  d19, 19, d30, 30, q15, 15, d30, d31
 
     // Load input
 	vld1.64 {q14}, [r2]!
 	// Convert to GCM format
 	vrev64.8 q14, q14
 	vswp d28, d29
-	// q12-q13 = in1 * H^3
+	// q12-q13 = in1 * H^7
     //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d4, 4, d5, 5,  d18, 18,  d30, 30, q15, 15, d30, d31
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d12, 12, d13, 13,  d18, 18,  d30, 30, q15, 15, d30, d31
     veor q10, q12
     veor q11, q13
 
@@ -197,9 +194,9 @@ _ac_gcm_ghash_low:
 	// Convert to GCM format
 	vrev64.8 q14, q14
 	vswp d28, d29
-	// q12-q13 = in2 * H^2
+	// q12-q13 = in2 * H^6
     //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d2, 2, d3, 3,  d17, 17,  d30, 30, q15, 15, d30, d31
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d10, 10, d11, 11,  d17, 17,  d30, 30, q15, 15, d30, d31
     veor q10, q12
     veor q11, q13
 
@@ -208,7 +205,55 @@ _ac_gcm_ghash_low:
 	// Convert to GCM format
 	vrev64.8 q14, q14
 	vswp d28, d29
-	// q12-q13 = in1 * H
+	// q12-q13 = in3 * H^5
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d8, 8, d9, 9,  d16, 16,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in4 * H^4
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d6, 6, d7, 7,  d16, 16,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in5 * H^3
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d4, 4, d5, 5,  d16, 16,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in6 * H^2
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d2, 2, d3, 3,  d16, 16,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in7 * H
     //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
 	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d0, 0, d1, 1,  d16, 16,  d30, 30, q15, 15, d30, d31
     veor q10, q12
@@ -217,8 +262,8 @@ _ac_gcm_ghash_low:
     //rrdc rq, a0q, a0l, a0h, a1q, a1l, a1h, t0q, t0l, t0h, t1q, t1l, t1h
 	rrdc q14, q10, d20, d21, q11, d22, d23, q12, d24, d25, q13, d26, d27
 
-	sub r3, #64
-    cmp r3, #63
+	sub r3, #128
+    cmp r3, #127
     bhi ghash_block
 
     leftover:
@@ -240,6 +285,7 @@ _ac_gcm_ghash_low:
     finish:
 	vstm r0, {q14}
 
+    vpop {q4-q7}
 	bx lr
 
 ac_gcm_mul_low:
