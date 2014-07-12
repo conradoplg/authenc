@@ -47,11 +47,22 @@ static void gcm_lsh_low(dig_t *t)
 
 void ac_gcm_tab_low(dig_t *t, unsigned char *h) {
 	authenc_align dig_t ah[AC_GCM_BLOCK_LEN / sizeof(dig_t)];
-
-	memcpy(ah, h, AC_GCM_BLOCK_LEN);
+    const size_t len = AC_GCM_BLOCK_LEN / sizeof(dig_t);
+	
+    //Make aligned copy.
+    memcpy(ah, h, AC_GCM_BLOCK_LEN);
+    
+    //(H << 1)
 	memcpy(t, h, AC_GCM_BLOCK_LEN);
 	gcm_lsh_low(t);
-
-	ac_gcm_mul_low(t + AC_GCM_BLOCK_LEN / sizeof(dig_t), ah, t);
-	gcm_lsh_low(t + AC_GCM_BLOCK_LEN / sizeof(dig_t));
+    //H^2
+	ac_gcm_mul_low(t + len, ah, t);
+    //H^3
+    ac_gcm_mul_low(t + 2 * len, t + len, t);
+    //H^4
+    ac_gcm_mul_low(t + 3 * len, t + 2 * len, t);
+    // << 1
+	gcm_lsh_low(t + len);
+    gcm_lsh_low(t + 2 * len);
+    gcm_lsh_low(t + 3 * len);
 }

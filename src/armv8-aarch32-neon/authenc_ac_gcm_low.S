@@ -158,60 +158,87 @@ _ac_gcm_ghash_low:
     bxeq lr
 
 	// Load old Y
-	vldm r0, {q8}
-	// Load H, H2
-    vldm r1, {q2-q3}
-    veor d20, d4, d5
-	veor d22, d6, d7
+	vldm r0, {q14}
+	// Load H, H2, H3, H4
+    vldm r1, {q0-q3}
+    veor d16, d0, d1
+	veor d17, d2, d3
+    veor d18, d4, d5
+    veor d19, d6, d7
 
-	cmp r3, #31
+	cmp r3, #63
 	bls leftover
 
 	ghash_block:
 	// Load input
-	vld1.64 {q0}, [r2]!
+	vld1.64 {q12}, [r2]!
 	// Convert to GCM format
-	vrev64.8 q0, q0
-	vswp d0, d1
+	vrev64.8 q12, q12
+	vswp d24, d25
 	// q8 = in0 ^ Y0
-	veor q8, q0
-	// q12-q13 = (in0 ^ Y0) * H^2
+	veor q14, q12
+	// q10-q11 = (in0 ^ Y0) * H^4
     //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d16, 16, d17, 17,  d6, 6, d7, 7,  d22, 22, d21, 21, q9, 9, d18, d19
-    // Load input
-	vld1.64 {q8}, [r2]!
-	// Convert to GCM format
-	vrev64.8 q8, q8
-	vswp d16, d17
-	// q0-q1 = in1 * H
-    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
-	mul128_p64 q0, 0, d0, d1,  q1, 1, d2, d3,  d16, 16, d17, 17,  d4, 4, d5, 5,  d20, 20,  d21, 21, q9, 9, d18, d19
-    veor q0, q12
-    veor q1, q13
-    //rrdc rq, a0q, a0l, a0h, a1q, a1l, a1h, t0q, t0l, t0h, t1q, t1l, t1h
-	rrdc q8, q0, d0, d1, q1, d2, d3, q12, d24, d25, q13, d26, d27
+	mul128_p64 q10, 10, d20, d21,  q11, 11, d22, d23,  d28, 28, d29, 29,  d6, 6, d7, 7,  d19, 19, d30, 30, q15, 15, d30, d31
 
-	sub r3, #32
-    cmp r3, #31
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in1 * H^3
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d4, 4, d5, 5,  d18, 18,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in2 * H^2
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d2, 2, d3, 3,  d17, 17,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    // Load input
+	vld1.64 {q14}, [r2]!
+	// Convert to GCM format
+	vrev64.8 q14, q14
+	vswp d28, d29
+	// q12-q13 = in1 * H
+    //mul128_p64 r0q, r0qn, r0l, r0h,  r1q, r1qn, r1l, r1h,  al, aln, ah, ahn,  bl, bln, bh, bhn,  dd, ddn,  t0d, t0dn,  t1q, t1qn
+	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d0, 0, d1, 1,  d16, 16,  d30, 30, q15, 15, d30, d31
+    veor q10, q12
+    veor q11, q13
+
+    //rrdc rq, a0q, a0l, a0h, a1q, a1l, a1h, t0q, t0l, t0h, t1q, t1l, t1h
+	rrdc q14, q10, d20, d21, q11, d22, d23, q12, d24, d25, q13, d26, d27
+
+	sub r3, #64
+    cmp r3, #63
     bhi ghash_block
 
     leftover:
     cmp r3, #0
     beq finish
     // Load input
-	vld1.64 {q0}, [r2]!
+	vld1.64 {q12}, [r2]!
 	// Convert to GCM format
-	vrev64.8 q0, q0
-	vswp d0, d1
+	vrev64.8 q12, q12
+	vswp d24, d25
 	// Y' = in ^ Y
-	veor q8, q0
+	veor q14, q12
 	// Y' = (in ^ Y) * H
-	mul128_p64 q0, 0, d0, d1,  q1, 1, d2, d3,  d16, 16, d17, 17,  d4, 4, d5, 5, d20, 20, d21, 21, q9, 9, d18, d19
-    vstm r0, {q0}
-    rrdc q8, q0, d0, d1, q1, d2, d3, q12, d24, d25, q13, d26, d27
+    mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d0, 0, d1, 1,  d16, 16,  d30, 30, q15, 15, d30, d31
+    rrdc q14, q12, d24, d25, q13, d26, d27, q10, d20, d21, q11, d22, d23
+    sub r3, #16
+    b leftover
 
     finish:
-	vstm r0, {q8}
+	vstm r0, {q14}
 
 	bx lr
 
