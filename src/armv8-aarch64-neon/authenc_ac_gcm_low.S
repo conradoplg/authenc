@@ -1,5 +1,3 @@
-#if 0
-.arm
 .align 4
 .globl ac_gcm_convert_low
 .globl _ac_gcm_convert_low
@@ -24,92 +22,66 @@
  * @param[in] bl, bln, bh, bhn  Second operand (lower d, number of lower d, higher d, number of higher d). Preserved.
  * @param[in] t1q, t1qn, t1l, t1ln, t1h, t1hn Temp register (q reg, # of q, lower d, # of lower d, higher d, # of higher d). Clobbered.
  */
-.macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, al, aln, ah, ahn, bl, bln, bh, bhn, t1q, t1qn, t1l, t1ln, t1h, t1hn
-    vmull_p64 \r0qn, \aln, \bln
-    vmull_p64 \r1qn, \ahn, \bhn
-	veor \t1h, \bl, \bh
-	veor \t1l, \al, \ah
-    vmull_p64 \t1qn, \t1hn, \t1ln
-	veor \t1q, \r0q
-	veor \t1q, \r1q
-	veor \r0h, \t1l
-	veor \r1l, \t1h
+.macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, aq, aln, ah, ahn, bq, bln, bh, bhn, t1q, t1qn, t1l, t1ln, t1h, t1hn, t0q, zq
+    //r0 = a0 * b0
+    pmull \r0q\().1q, \aq\().1d, \bq\().1d
+    //r1 = a1 * b1
+    pmull2 \r1q\().1q, \aq\().2d, \bq\().2d
+    ext.16b \t0q, \bq, \bq, #8
+    //t1 = a0 * b1
+    pmull \t1q\().1q, \aq\().1d, \t0q\().1d
+    //t0 = a1 * b0
+    pmull2 \t0q\().1q, \aq\().2d, \t0q\().2d
+    eor.16b \t0q, \t0q, \t1q
+    ext.16b \t1q, \zq, \t0q, #8
+    eor.16b \r0q, \r0q, \t1q
+    ext.16b \t1q, \t0q, \zq, #8
+    eor.16b \r1q, \r1q, \t1q
 .endm
 
 /**
- * Reflected GCM reduction.
+ * Reflected GCM reduction using VMULL.
  *
- * @param[out] rq		The reduced value.
- * @param[in] a0q, a0l, a0h Lower part of operand (q reg, lower d, higher d). Clobbered.
- * @param[in] a1q, a1l, a1h Higher part of operand (q reg, lower d, higher d). Clobbered.
- * @param[in] t0q, t0l, t0h Temp reg (q reg, lower d, higher d). Clobbered.
- * @param[in] t1q, t1l, t1h Temp reg (q reg, lower d, higher d). Clobbered.
+ * @param[out] rq:		The reduced value.
+ * @param[in] a0q, a0l, a0ln, a0h, a0hn: Lower part of operand (q reg, lower d, lower d #, higher d, higher d #). Clobbered.
+ * @param[in] a1q, a1l, a1h: Higher part of operand (q reg, lower d, higher d). Clobbered.
+ * @param[in] t0q, t0qn, t0l, t0h: Temp reg (q reg, q reg #, lower d, higher d). Clobbered.
+ * @param[in] t1q, t1l, t1h: Temp reg (q reg, lower d, higher d). Clobbered.
+ * @param[in] pdn: precomputed value # (0xc200000000000000)
  */
-.macro rrdc rq, a0q, a0l, a0h, a1q, a1l, a1h, t0q, t0l, t0h, t1q, t1l, t1h
-	// Reflected reduction. Input: \a1q:\a0q.
-	//\t0l = \a0l << 57
-	//\t0h = \a0h << 57
-	vshl.i64 \t0q, \a0q, #57
-	//\t1l = \a0l << 62
-	//\t1h = \a0h << 62
-	vshl.i64 \t1q, \a0q, #62
-	//\t1l = (\a0l << 62) ^ (\a0l << 57)
-	//\t1h = (\a0h << 62) ^ (\a0h << 57)
-	veor \t1q, \t1q, \t0q
-	//\t0l = (\a0l << 63)
-	//\t0h = (\a0h << 63)
-	vshl.i64 \t0q, \a0q, #63
-	//\t1l = (\a0l << 62) ^ (\a0l << 57) ^ (\a0l << 63)
-	//\t1h = (\a0h << 62) ^ (\a0h << 57) ^ (\a0h << 63)
-	veor \t1q, \t1q, \t0q
-	//\a0h = \a0h ^ (\a0l << 62) ^ (\a0l << 57) ^ (\a0l << 63)
-	veor \a0h, \a0h, \t1l
-	//\a1l = \a1l ^ (\a0h << 62) ^ (\a0h << 57) ^ (\a0h << 63)
-	veor \a1l, \a1l, \t1h
-
-	//\t1l = \a0l >> 1
-	//\t1h = \a0h >> 1
-	vshr.u64 \t1q, \a0q, #1
-	//\a1l' = \a1l ^ \a0l
-	//\a1h' = \a1h ^ \a0h
-	veor \a1q, \a1q, \a0q
-	//\a0l' = \a0l ^ (\a0l >> 1)
-	//\a0h' = \a0h ^ (\a0h >> 1)
-	veor \a0q, \a0q, \t1q
-	//\t1l = (\a0l >> 7)
-	//\t1h = (\a0h >> 7)
-	vshr.u64 \t1q, \t1q, #6
-	//\a0l' = (\a0l >> 1) ^ (\a0l >> 2)
-	//\a0h' = (\a0h >> 1) ^ (\a0h >> 2)
-	vshr.u64 \a0q, \a0q, #1
-	//\a0l' = \a1l ^ \a0l ^ (\a0l >> 1) ^ (\a0l >> 2)
-	//\a0h' = \a1h ^ \a0h ^ (\a0h >> 1) ^ (\a0h >> 2)
-	veor \a0q, \a0q, \a1q
-	//\a0l' = \a1l ^ \a0l ^ (\a0l >> 1) ^ (\a0l >> 2) ^ (\a0l >> 7)
-	//\a0h' = \a1h ^ \a0h ^ (\a0h >> 1) ^ (\a0h >> 2) ^ (\a0h >> 7)
-	veor \rq, \a0q, \t1q
+.macro rrdc_p64 rq, a0q, a0l, a0ln, a0h, a0hn, a1q, a1l, a1h, t0q, t0qn, t0l, t0h, t1q, t1l, t1h, pq, zq
+    pmull \t0q\().1q, \a0q\().1d, \pq\().1d
+    ext \t1q\().16b, \zq\().16b, \t0q\().16b, #8
+    eor.16b \a0q, \a0q, \t1q
+    ext \t1q\().16b, \t0q\().16b, \zq\().16b, #8
+    eor.16b \a1q, \a1q, \t1q
+    pmull2 \t0q\().1q, \a0q\().2d, \pq\().2d
+    eor.16b \a1q, \a1q, \t0q
+    eor.16b \rq, \a0q, \a1q
 .endm
-
 
 ac_gcm_convert_low:
 _ac_gcm_convert_low:
-	vld1.32 {q0}, [r1]
-	vrev64.8 q0, q0
-	vswp d0, d1
-	vst1.32 {q0}, [r0]
-	bx lr
+    ld1.16b {v0}, [x1]
+	rev64.16b v0, v0
+	ext.16b v0, v0, v0, #8
+	st1.16b {v0}, [x0]
+	ret
 
 ac_gcm_ghash_low:
 _ac_gcm_ghash_low:
-    teq r3, #0
-    bxeq lr
-    vpush {q4-q7}
+    cbz x3, exit
 
 	// Load old Y
-	vldm r0, {q14}
+	ld1.16b {v14}, [x0]
 	// Load H^1--H^8
-    vldm r1, {q0-q7}
+    ld1.16b {v0,v1,v2,v3}, [x1], #(16*4)
+    ld1.16b {v4,v5,v6,v7}, [x1]
+    movi.16b v8, #0xc2
+    shl.2d v8, v8, #(64-8)
+    movi.16b v9, #0
 
+#if 0
 	cmp r3, #127
 	bls leftover
 
@@ -198,47 +170,47 @@ _ac_gcm_ghash_low:
     veor q10, q12
     veor q11, q13
 
-	rrdc q14, q10, d20, d21, q11, d22, d23, q12, d24, d25, q13, d26, d27
+	rrdc_p64 q14, q10, d20, 20, d21, 21, q11, d22, d23, q12, 12, d24, d25, q13, d26, d27, 16
 
 	sub r3, #128
     cmp r3, #127
     bhi ghash_block
+#endif
 
     leftover:
-    cmp r3, #0
-    beq finish
+    cbz x3, finish
     // Load input
-	vld1.64 {q12}, [r2]!
+	ld1.16b {v12}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q12, q12
-	vswp d24, d25
+	rev64.16b v12, v12
+	ext.16b v12, v12, v12, #8
 	// Y' = in ^ Y
-	veor q14, q12
+	eor.16b v14, v14, v12
 	// Y' = (in ^ Y) * H
-    mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d0, 0, d1, 1,  q15, 15, d30, 30, d31, 31
-    rrdc q14, q12, d24, d25, q13, d26, d27, q10, d20, d21, q11, d22, d23
-    sub r3, #16
+    mul128_p64 v12, 12, d24, d25,  v13, 13, d26, d27,  v14, 28, d29, 29,  v0, 0, d1, 1,  v15, 15, d30, 30, d31, 31, v10, v9
+    rrdc_p64 v14, v12, d24, 24, d25, 25, v13, d26, d27, v10, 10, d20, d21, v11, d22, d23, v8, v9
+    sub x3, x3, #16
     b leftover
 
     finish:
-	vstm r0, {q14}
+	st1.16b {v14}, [x0]
 
-    vpop {q4-q7}
-	bx lr
+    exit:
+	ret
 
 ac_gcm_mul_low:
 _ac_gcm_mul_low:
 	// Load B
-	vldm r2, {q3}
-	veor d20, d6, d7
+	ld1.16b {v3}, [x2]
+    movi.16b v8, #0xc2
+    shl.2d v8, v8, #(64-8)
 
 	// Load A
-	vld1.64 {q2}, [r1]!
+	ld1.16b {v2}, [x1], #16
 	// C = A * B
-    mul128_p64 q0, 0, d0, d1,  q1, 1, d2, d3,  d4, 4, d5, 5,  d6, 6, d7, 7,  q15, 15, d30, 30, d31, 31
-    rrdc q2, q0, d0, d1, q1, d2, d3, q12, d24, d25, q13, d26, d27
+    mul128_p64 v0, 0, d0, d1,  v1, 1, d2, d3,  v2, 4, d5, 5,  v3, 6, d7, 7,  v15, 15, d30, 30, d31, 31, v10, v9
+    rrdc_p64 v2, v0, d0, 0, d1, 1, v1, d2, d3, v12, 12, d24, d25, v13, d26, d27, v8, v9
 
-	vstm r0, {q2}
+	st1.16b {v2}, [x0]
 
-	bx lr
-#endif
+	ret

@@ -56,6 +56,7 @@ void ac_gcm_tab_low(dig_t *t, unsigned char *h) {
     //(H << 1)
 	memcpy(t, h, AC_GCM_BLOCK_LEN);
 	gcm_lsh_low(t);
+    return;
     //H^2
 	ac_gcm_mul_low(t + len, ah, t);
     //H^3 -- H^8
