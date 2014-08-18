@@ -6,33 +6,31 @@
 .globl ac_gcm_mul_low
 .globl _ac_gcm_mul_low
 
-.macro vmull_p64 d, n, m
-    .word (0b11110010101000000000111000000000 \
-    | (\m & 0xF) | ((\m & 0x10) << 1) \
-    | ((\n & 0xF) << 16) | ((\n & 0x10) << 3) \
-    | ((\d & 0x7) << 13) | ((\d & 0x8) << 19) )
-.endm
-
 /**
  * Binary 128x128-bit polynomial multiplication.
  *
- * @param[out] r0q, r0qn, r0l, r0h   Lower part of result (q register, number of q, lower d, higher d)
- * @param[out] r1q, r1qn, r1l, r1h   Higher part of result (q register, number of q, lower d, higher d)
- * @param[in] al, aln, ah, ahn  First operand (lower d, number of lower d, higher d, number of higher d). Preserved.
- * @param[in] bl, bln, bh, bhn  Second operand (lower d, number of lower d, higher d, number of higher d). Preserved.
- * @param[in] t1q, t1qn, t1l, t1ln, t1h, t1hn Temp register (q reg, # of q, lower d, # of lower d, higher d, # of higher d). Clobbered.
+ * @param[out] r0q Lower part of result.
+ * @param[out] r1q Higher part of result.
+ * @param[in] aq First operand. Preserved.
+ * @param[in] bq Second operand. Preserved.
+ * @param[in] t0q Temp register. Clobbered.
+ * @param[in] t1q Temp register. Clobbered.
+ * @param[in] zq Zeroed register. Preserved.
  */
-.macro mul128_p64 r0q, r0qn, r0l, r0h, r1q, r1qn, r1l, r1h, aq, aln, ah, ahn, bq, bln, bh, bhn, t1q, t1qn, t1l, t1ln, t1h, t1hn, t0q, zq
+.macro mul128_p64 r0q, r1q, aq, bq, t0q, t1q, zq
     //r0 = a0 * b0
     pmull \r0q\().1q, \aq\().1d, \bq\().1d
     //r1 = a1 * b1
     pmull2 \r1q\().1q, \aq\().2d, \bq\().2d
+    //Reverse low and high parts
     ext.16b \t0q, \bq, \bq, #8
     //t1 = a0 * b1
     pmull \t1q\().1q, \aq\().1d, \t0q\().1d
     //t0 = a1 * b0
     pmull2 \t0q\().1q, \aq\().2d, \t0q\().2d
+    //t0 (a0 * b1) + (a1 * b0)
     eor.16b \t0q, \t0q, \t1q
+    //xor into place
     ext.16b \t1q, \zq, \t0q, #8
     eor.16b \r0q, \r0q, \t1q
     ext.16b \t1q, \t0q, \zq, #8
@@ -187,7 +185,7 @@ _ac_gcm_ghash_low:
 	// Y' = in ^ Y
 	eor.16b v14, v14, v12
 	// Y' = (in ^ Y) * H
-    mul128_p64 v12, 12, d24, d25,  v13, 13, d26, d27,  v14, 28, d29, 29,  v0, 0, d1, 1,  v15, 15, d30, 30, d31, 31, v10, v9
+    mul128_p64 v12, v13, v14, v0, v15, v10, v9
     rrdc_p64 v14, v12, d24, 24, d25, 25, v13, d26, d27, v10, 10, d20, d21, v11, d22, d23, v8, v9
     sub x3, x3, #16
     b leftover
@@ -208,7 +206,7 @@ _ac_gcm_mul_low:
 	// Load A
 	ld1.16b {v2}, [x1], #16
 	// C = A * B
-    mul128_p64 v0, 0, d0, d1,  v1, 1, d2, d3,  v2, 4, d5, 5,  v3, 6, d7, 7,  v15, 15, d30, 30, d31, 31, v10, v9
+    mul128_p64 v0, v1, v2, v3, v15, v10, v9
     rrdc_p64 v2, v0, d0, 0, d1, 1, v1, d2, d3, v12, 12, d24, d25, v13, d26, d27, v8, v9
 
 	st1.16b {v2}, [x0]
