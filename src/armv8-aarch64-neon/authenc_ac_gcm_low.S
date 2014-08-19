@@ -38,31 +38,29 @@
 .endm
 
 /**
- * Reflected GCM reduction using VMULL.
+ * GCM reduction using VMULL.
  *
  * @param[out] rq The reduced value.
  * @param[in] a0q Lower part of operand. Clobbered.
  * @param[in] a1q Higher part of operand. Clobbered.
  * @param[in] t0q Temp register. Clobbered.
  * @param[in] t1q Temp register. Clobbered.
- * @param[in] pq Precomputed value (0xc200000000000000c200000000000000). Preserved.
+ * @param[in] pq Precomputed value (0x00000000000000870000000000000087). Preserved.
  */
-.macro rrdc_p64 rq, a0q, a1q, t0q, t1q, pq, zq
-    pmull \t0q\().1q, \a0q\().1d, \pq\().1d
-    ext \t1q\().16b, \zq\().16b, \t0q\().16b, #8
-    eor.16b \a0q, \a0q, \t1q
+.macro rdc_p64 rq, a0q, a1q, t0q, t1q, pq, zq
+    pmull2 \t0q\().1q, \a1q\().2d, \pq\().2d
     ext \t1q\().16b, \t0q\().16b, \zq\().16b, #8
     eor.16b \a1q, \a1q, \t1q
-    pmull2 \t0q\().1q, \a0q\().2d, \pq\().2d
-    eor.16b \a1q, \a1q, \t0q
-    eor.16b \rq, \a0q, \a1q
+    ext \t1q\().16b, \zq\().16b, \t0q\().16b, #8
+    eor.16b \a0q, \a0q, \t1q
+    pmull \t0q\().1q, \a1q\().1d, \pq\().1d
+    eor.16b \rq, \a0q, \t0q
 .endm
 
 ac_gcm_convert_low:
 _ac_gcm_convert_low:
     ld1.16b {v0}, [x1]
-	rev64.16b v0, v0
-	ext.16b v0, v0, v0, #8
+    rbit.16b v0, v0
 	st1.16b {v0}, [x0]
 	ret
 
@@ -75,8 +73,8 @@ _ac_gcm_ghash_low:
 	// Load H^1--H^8
     ld1.16b {v0,v1,v2,v3}, [x1], #(16*4)
     ld1.16b {v4,v5,v6,v7}, [x1]
-    movi.16b v8, #0xc2
-    shl.2d v8, v8, #(64-8)
+    movi.16b v8, #0x87
+    ushr.2d v8, v8, #(64-8)
     movi.16b v9, #0
 
 #if 0
@@ -180,13 +178,12 @@ _ac_gcm_ghash_low:
     // Load input
 	ld1.16b {v12}, [x2], #16
 	// Convert to GCM format
-	rev64.16b v12, v12
-	ext.16b v12, v12, v12, #8
+    rbit.16b v12, v12
 	// Y' = in ^ Y
 	eor.16b v14, v14, v12
 	// Y' = (in ^ Y) * H
     mul128_p64 v12, v13, v14, v0, v15, v10, v9
-    rrdc_p64 v14, v12, v13, v10, v11, v8, v9
+    rdc_p64 v14, v12, v13, v10, v11, v8, v9
     sub x3, x3, #16
     b leftover
 
@@ -200,14 +197,15 @@ ac_gcm_mul_low:
 _ac_gcm_mul_low:
 	// Load B
 	ld1.16b {v3}, [x2]
-    movi.16b v8, #0xc2
-    shl.2d v8, v8, #(64-8)
+    movi.16b v8, #0x87
+    ushr.2d v8, v8, #(64-8)
+    movi.16b v9, #0
 
 	// Load A
 	ld1.16b {v2}, [x1], #16
 	// C = A * B
     mul128_p64 v0, v1, v2, v3, v15, v10, v9
-    rrdc_p64 v2, v0, v1, v12, v13, v8, v9
+    rdc_p64 v2, v0, v1, v12, v13, v8, v9
 
 	st1.16b {v2}, [x0]
 
