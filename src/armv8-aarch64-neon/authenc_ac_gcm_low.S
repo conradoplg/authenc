@@ -40,14 +40,14 @@
 /**
  * Reflected GCM reduction using VMULL.
  *
- * @param[out] rq:		The reduced value.
- * @param[in] a0q, a0l, a0ln, a0h, a0hn: Lower part of operand (q reg, lower d, lower d #, higher d, higher d #). Clobbered.
- * @param[in] a1q, a1l, a1h: Higher part of operand (q reg, lower d, higher d). Clobbered.
- * @param[in] t0q, t0qn, t0l, t0h: Temp reg (q reg, q reg #, lower d, higher d). Clobbered.
- * @param[in] t1q, t1l, t1h: Temp reg (q reg, lower d, higher d). Clobbered.
- * @param[in] pdn: precomputed value # (0xc200000000000000)
+ * @param[out] rq The reduced value.
+ * @param[in] a0q Lower part of operand. Clobbered.
+ * @param[in] a1q Higher part of operand. Clobbered.
+ * @param[in] t0q Temp register. Clobbered.
+ * @param[in] t1q Temp register. Clobbered.
+ * @param[in] pq Precomputed value (0xc200000000000000c200000000000000). Preserved.
  */
-.macro rrdc_p64 rq, a0q, a0l, a0ln, a0h, a0hn, a1q, a1l, a1h, t0q, t0qn, t0l, t0h, t1q, t1l, t1h, pq, zq
+.macro rrdc_p64 rq, a0q, a1q, t0q, t1q, pq, zq
     pmull \t0q\().1q, \a0q\().1d, \pq\().1d
     ext \t1q\().16b, \zq\().16b, \t0q\().16b, #8
     eor.16b \a0q, \a0q, \t1q
@@ -186,7 +186,7 @@ _ac_gcm_ghash_low:
 	eor.16b v14, v14, v12
 	// Y' = (in ^ Y) * H
     mul128_p64 v12, v13, v14, v0, v15, v10, v9
-    rrdc_p64 v14, v12, d24, 24, d25, 25, v13, d26, d27, v10, 10, d20, d21, v11, d22, d23, v8, v9
+    rrdc_p64 v14, v12, v13, v10, v11, v8, v9
     sub x3, x3, #16
     b leftover
 
@@ -207,7 +207,7 @@ _ac_gcm_mul_low:
 	ld1.16b {v2}, [x1], #16
 	// C = A * B
     mul128_p64 v0, v1, v2, v3, v15, v10, v9
-    rrdc_p64 v2, v0, d0, 0, d1, 1, v1, d2, d3, v12, 12, d24, d25, v13, d26, d27, v8, v9
+    rrdc_p64 v2, v0, v1, v12, v13, v8, v9
 
 	st1.16b {v2}, [x0]
 
