@@ -17,24 +17,24 @@
  * @param[in] t1q Temp register. Clobbered.
  * @param[in] zq Zeroed register. Preserved.
  */
-.macro mul128_p64 r0q, r1q, aq, bq, t0q, t1q, zq
+.macro mul128_p64 r0, r1, a, b, t0, t1, z
     //r0 = a0 * b0
-    pmull \r0q\().1q, \aq\().1d, \bq\().1d
+    pmull \r0\().1q, \a\().1d, \b\().1d
     //r1 = a1 * b1
-    pmull2 \r1q\().1q, \aq\().2d, \bq\().2d
+    pmull2 \r1\().1q, \a\().2d, \b\().2d
     //Reverse low and high parts
-    ext.16b \t0q, \bq, \bq, #8
+    ext.16b \t0, \b, \b, #8
     //t1 = a0 * b1
-    pmull \t1q\().1q, \aq\().1d, \t0q\().1d
+    pmull \t1\().1q, \a\().1d, \t0\().1d
     //t0 = a1 * b0
-    pmull2 \t0q\().1q, \aq\().2d, \t0q\().2d
+    pmull2 \t0\().1q, \a\().2d, \t0\().2d
     //t0 (a0 * b1) + (a1 * b0)
-    eor.16b \t0q, \t0q, \t1q
+    eor.16b \t0, \t0, \t1
     //xor into place
-    ext.16b \t1q, \zq, \t0q, #8
-    eor.16b \r0q, \r0q, \t1q
-    ext.16b \t1q, \t0q, \zq, #8
-    eor.16b \r1q, \r1q, \t1q
+    ext.16b \t1, \z, \t0, #8
+    eor.16b \r0, \r0, \t1
+    ext.16b \t1, \t0, \z, #8
+    eor.16b \r1, \r1, \t1
 .endm
 
 /**
@@ -71,107 +71,93 @@ _ac_gcm_ghash_low:
 	// Load old Y
 	ld1.16b {v14}, [x0]
 	// Load H^1--H^8
-    ld1.16b {v0,v1,v2,v3}, [x1], #(16*4)
+    ld1.16b {v0,v1,v2,v3}, [x1], #64
     ld1.16b {v4,v5,v6,v7}, [x1]
     movi.16b v8, #0x87
     ushr.2d v8, v8, #(64-8)
     movi.16b v9, #0
 
-#if 0
-	cmp r3, #127
-	bls leftover
+	cmp x3, #127
+	b.ls leftover
 
 	ghash_block:
 	// Load input
-	vld1.64 {q12}, [r2]!
+	ld1.16b {v12}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q12, q12
-	vswp d24, d25
-	// q8 = in0 ^ Y0
-	veor q14, q12
+	rbit.16b v12, v12
+	// v14 = in0 ^ Y0
+	eor.16b v14, v14, v12
 	// q10-q11 = (in0 ^ Y0) * H^8
-	mul128_p64 q10, 10, d20, d21,  q11, 11, d22, d23,  d28, 28, d29, 29,  d14, 14, d15, 15,  q15, 15, d30, 30, d31, 31
+    mul128_p64 v10, v11, v14, v7, v15, v16, v9
 
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in1 * H^7
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d12, 12, d13, 13,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v6, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in2 * H^6
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d10, 10, d11, 11,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v5, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in3 * H^5
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d8, 8, d9, 9,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v4, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
-    
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in4 * H^4
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d6, 6, d7, 7,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v3, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
-    
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in5 * H^3
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d4, 4, d5, 5,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v2, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
-    
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in6 * H^2
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d2, 2, d3, 3,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v1, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
-    
     // Load input
-	vld1.64 {q14}, [r2]!
+	ld1.16b {v14}, [x2], #16
 	// Convert to GCM format
-	vrev64.8 q14, q14
-	vswp d28, d29
+	rbit.16b v14, v14
 	// q12-q13 = in7 * H
-	mul128_p64 q12, 12, d24, d25,  q13, 13, d26, d27,  d28, 28, d29, 29,  d0, 0, d1, 1,  q15, 15, d30, 30, d31, 31
-    veor q10, q12
-    veor q11, q13
+    mul128_p64 v12, v13, v14, v0, v15, v16, v9
+    eor.16b v10, v10, v12
+    eor.16b v11, v11, v13
 
-	rrdc_p64 q14, q10, d20, 20, d21, 21, q11, d22, d23, q12, 12, d24, d25, q13, d26, d27, 16
+    rdc_p64 v14, v10, v11, v12, v13, v8, v9
 
-	sub r3, #128
-    cmp r3, #127
-    bhi ghash_block
-#endif
+	sub x3, x3, #128
+    cmp x3, #127
+    b.hi ghash_block
 
     leftover:
     cbz x3, finish
@@ -202,7 +188,7 @@ _ac_gcm_mul_low:
     movi.16b v9, #0
 
 	// Load A
-	ld1.16b {v2}, [x1], #16
+	ld1.16b {v2}, [x1]
 	// C = A * B
     mul128_p64 v0, v1, v2, v3, v15, v10, v9
     rdc_p64 v2, v0, v1, v12, v13, v8, v9
