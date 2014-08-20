@@ -69,91 +69,91 @@ _ac_gcm_ghash_low:
     cbz x3, exit
 
 	// Load old Y
-	ld1.16b {v14}, [x0]
+	ld1.16b {v24}, [x0]
 	// Load H^1--H^8
     ld1.16b {v0,v1,v2,v3}, [x1], #64
     ld1.16b {v4,v5,v6,v7}, [x1]
-    movi.16b v8, #0x87
-    ushr.2d v8, v8, #(64-8)
-    movi.16b v9, #0
+    movi.16b v18, #0x87
+    ushr.2d v18, v18, #(64-8)
+    movi.16b v19, #0
 
 	cmp x3, #127
 	b.ls leftover
 
 	ghash_block:
 	// Load input
-	ld1.16b {v12}, [x2], #16
+	ld1.16b {v22}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v12, v12
-	// v14 = in0 ^ Y0
-	eor.16b v14, v14, v12
+	rbit.16b v22, v22
+	// v24 = in0 ^ Y0
+	eor.16b v24, v24, v22
 	// q10-q11 = (in0 ^ Y0) * H^8
-    mul128_p64 v10, v11, v14, v7, v15, v16, v9
+    mul128_p64 v20, v21, v24, v7, v25, v16, v19
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in1 * H^7
-    mul128_p64 v12, v13, v14, v6, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v6, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in2 * H^6
-    mul128_p64 v12, v13, v14, v5, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v5, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in3 * H^5
-    mul128_p64 v12, v13, v14, v4, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v4, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in4 * H^4
-    mul128_p64 v12, v13, v14, v3, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v3, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in5 * H^3
-    mul128_p64 v12, v13, v14, v2, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v2, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in6 * H^2
-    mul128_p64 v12, v13, v14, v1, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v1, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
     // Load input
-	ld1.16b {v14}, [x2], #16
+	ld1.16b {v24}, [x2], #16
 	// Convert to GCM format
-	rbit.16b v14, v14
+	rbit.16b v24, v24
 	// q12-q13 = in7 * H
-    mul128_p64 v12, v13, v14, v0, v15, v16, v9
-    eor.16b v10, v10, v12
-    eor.16b v11, v11, v13
+    mul128_p64 v22, v23, v24, v0, v25, v16, v19
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 
-    rdc_p64 v14, v10, v11, v12, v13, v8, v9
+    rdc_p64 v24, v20, v21, v22, v23, v18, v19
 
 	sub x3, x3, #128
     cmp x3, #127
@@ -162,19 +162,19 @@ _ac_gcm_ghash_low:
     leftover:
     cbz x3, finish
     // Load input
-	ld1.16b {v12}, [x2], #16
+	ld1.16b {v22}, [x2], #16
 	// Convert to GCM format
-    rbit.16b v12, v12
+    rbit.16b v22, v22
 	// Y' = in ^ Y
-	eor.16b v14, v14, v12
+	eor.16b v24, v24, v22
 	// Y' = (in ^ Y) * H
-    mul128_p64 v12, v13, v14, v0, v15, v10, v9
-    rdc_p64 v14, v12, v13, v10, v11, v8, v9
+    mul128_p64 v22, v23, v24, v0, v25, v20, v19
+    rdc_p64 v24, v22, v23, v20, v21, v18, v19
     sub x3, x3, #16
     b leftover
 
     finish:
-	st1.16b {v14}, [x0]
+	st1.16b {v24}, [x0]
 
     exit:
 	ret
@@ -183,15 +183,15 @@ ac_gcm_mul_low:
 _ac_gcm_mul_low:
 	// Load B
 	ld1.16b {v3}, [x2]
-    movi.16b v8, #0x87
-    ushr.2d v8, v8, #(64-8)
-    movi.16b v9, #0
+    movi.16b v18, #0x87
+    ushr.2d v18, v18, #(64-8)
+    movi.16b v19, #0
 
 	// Load A
 	ld1.16b {v2}, [x1]
 	// C = A * B
-    mul128_p64 v0, v1, v2, v3, v15, v10, v9
-    rdc_p64 v2, v0, v1, v12, v13, v8, v9
+    mul128_p64 v0, v1, v2, v3, v25, v20, v19
+    rdc_p64 v2, v0, v1, v22, v23, v18, v19
 
 	st1.16b {v2}, [x0]
 
