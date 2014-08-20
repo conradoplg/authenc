@@ -40,21 +40,39 @@
 /**
  * GCM reduction using VMULL.
  *
- * @param[out] rq The reduced value.
- * @param[in] a0q Lower part of operand. Clobbered.
- * @param[in] a1q Higher part of operand. Clobbered.
- * @param[in] t0q Temp register. Clobbered.
- * @param[in] t1q Temp register. Clobbered.
- * @param[in] pq Precomputed value (0x00000000000000870000000000000087). Preserved.
+ * @param[out] r The reduced value.
+ * @param[in] a0 Lower part of operand. Clobbered.
+ * @param[in] a1 Higher part of operand. Clobbered.
+ * @param[in] t0 Temp register. Clobbered.
+ * @param[in] t1 Temp register. Clobbered.
+ * @param[in] p Precomputed value (0x00000000000000870000000000000087). Preserved.
  */
-.macro rdc_p64 rq, a0q, a1q, t0q, t1q, pq, zq
-    pmull2 \t0q\().1q, \a1q\().2d, \pq\().2d
-    ext \t1q\().16b, \t0q\().16b, \zq\().16b, #8
-    eor.16b \a1q, \a1q, \t1q
-    ext \t1q\().16b, \zq\().16b, \t0q\().16b, #8
-    eor.16b \a0q, \a0q, \t1q
-    pmull \t0q\().1q, \a1q\().1d, \pq\().1d
-    eor.16b \rq, \a0q, \t0q
+.macro rdc_p64 r, a0, a1, t0, t1, p, z
+	// Reduce higher part
+	// t0 = a1h * 0x87
+    pmull2 \t0\().1q, \a1\().2d, \p\().2d
+    // xor into place
+    ext \t1\().16b, \t0\().16b, \z\().16b, #8
+    eor.16b \a1, \a1, \t1
+    ext \t1\().16b, \z\().16b, \t0\().16b, #8
+    eor.16b \a0, \a0, \t1
+    // Reduce lower part
+    // t0 = a1l * 0x87
+    pmull \t0\().1q, \a1\().1d, \p\().1d
+    // xor into place
+    eor.16b \r, \a0, \t0
+.endm
+
+.macro ghash_block_iter h
+    // Load input
+	ld1.16b {v24}, [x2], #16
+	// Convert to GCM format
+	rbit.16b v24, v24
+	// Y' = in[n] * H^(8-n)
+    mul128_p64 v22, v23, v24, \h, v25, v16, v19
+    // Accumulate unreduced result
+    eor.16b v20, v20, v22
+    eor.16b v21, v21, v23
 .endm
 
 ac_gcm_convert_low:
@@ -73,105 +91,56 @@ _ac_gcm_ghash_low:
 	// Load H^1--H^8
     ld1.16b {v0,v1,v2,v3}, [x1], #64
     ld1.16b {v4,v5,v6,v7}, [x1]
+    // Constant used in reduction
     movi.16b v18, #0x87
     ushr.2d v18, v18, #(64-8)
+    // Zero register used in reduction
     movi.16b v19, #0
 
 	cmp x3, #127
 	b.ls leftover
 
+	// Hash 8 blocks
 	ghash_block:
-	// Load input
-	ld1.16b {v22}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v22, v22
-	// v24 = in0 ^ Y0
-	eor.16b v24, v24, v22
-	// q10-q11 = (in0 ^ Y0) * H^8
-    mul128_p64 v20, v21, v24, v7, v25, v16, v19
+		// Load input
+		ld1.16b {v22}, [x2], #16
+		// Convert to GCM format
+		rbit.16b v22, v22
+		// Y' = in0 ^ Y0
+		eor.16b v24, v24, v22
+		// Y' = (in0 ^ Y0) * H^8
+	    mul128_p64 v20, v21, v24, v7, v25, v16, v19
 
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in1 * H^7
-    mul128_p64 v22, v23, v24, v6, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
+		ghash_block_iter v6
+		ghash_block_iter v5
+		ghash_block_iter v4
+		ghash_block_iter v3
+		ghash_block_iter v2
+		ghash_block_iter v1
+		ghash_block_iter v0
 
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in2 * H^6
-    mul128_p64 v22, v23, v24, v5, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
+	    rdc_p64 v24, v20, v21, v22, v23, v18, v19
 
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in3 * H^5
-    mul128_p64 v22, v23, v24, v4, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
+		sub x3, x3, #128
+	    cmp x3, #127
+	    b.hi ghash_block
 
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in4 * H^4
-    mul128_p64 v22, v23, v24, v3, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
-
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in5 * H^3
-    mul128_p64 v22, v23, v24, v2, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
-
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in6 * H^2
-    mul128_p64 v22, v23, v24, v1, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
-
-    // Load input
-	ld1.16b {v24}, [x2], #16
-	// Convert to GCM format
-	rbit.16b v24, v24
-	// q12-q13 = in7 * H
-    mul128_p64 v22, v23, v24, v0, v25, v16, v19
-    eor.16b v20, v20, v22
-    eor.16b v21, v21, v23
-
-    rdc_p64 v24, v20, v21, v22, v23, v18, v19
-
-	sub x3, x3, #128
-    cmp x3, #127
-    b.hi ghash_block
-
+	// Hash remaining blocks
     leftover:
-    cbz x3, finish
-    // Load input
-	ld1.16b {v22}, [x2], #16
-	// Convert to GCM format
-    rbit.16b v22, v22
-	// Y' = in ^ Y
-	eor.16b v24, v24, v22
-	// Y' = (in ^ Y) * H
-    mul128_p64 v22, v23, v24, v0, v25, v20, v19
-    rdc_p64 v24, v22, v23, v20, v21, v18, v19
-    sub x3, x3, #16
-    b leftover
+	    cbz x3, finish
+
+	    // Load input
+		ld1.16b {v22}, [x2], #16
+		// Convert to GCM format
+	    rbit.16b v22, v22
+		// Y' = in ^ Y
+		eor.16b v24, v24, v22
+		// Y' = (in ^ Y) * H
+	    mul128_p64 v22, v23, v24, v0, v25, v20, v19
+	    rdc_p64 v24, v22, v23, v20, v21, v18, v19
+
+	    sub x3, x3, #16
+	    b leftover
 
     finish:
 	st1.16b {v24}, [x0]
@@ -183,8 +152,10 @@ ac_gcm_mul_low:
 _ac_gcm_mul_low:
 	// Load B
 	ld1.16b {v3}, [x2]
+	// Constant used in reduction
     movi.16b v18, #0x87
     ushr.2d v18, v18, #(64-8)
+    // Zero register used in reduction
     movi.16b v19, #0
 
 	// Load A
