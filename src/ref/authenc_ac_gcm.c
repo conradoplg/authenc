@@ -139,8 +139,8 @@ errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len) {
 	errno_t err = AUTHENC_OK;
 
 	ctx->len_a = ctx->len_c = 0;
-
 	memset(ctx->last_y, 0, AC_GCM_BLOCK_LEN);
+
 	err = sc_aesctr_key(ctx->bc_ctx, key, key_len);
 	if (err != AUTHENC_OK) {
 		return err;
@@ -162,6 +162,8 @@ errno_t ac_gcm_init_low(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_l
 	(void) key_len;
 	(void) msg_len;
 	(void) data_len;
+	ctx->len_a = ctx->len_c = 0;
+	memset(ctx->last_y, 0, AC_GCM_BLOCK_LEN);
 	//J_0 = IV || 0^31 || 1
 	memcpy(ctx->ctr, iv, AC_GCM_IV_LEN);
 	memset(ctx->ctr + AC_GCM_IV_LEN, 0, AC_GCM_BLOCK_LEN - AC_GCM_IV_LEN);
