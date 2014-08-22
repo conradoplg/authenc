@@ -105,8 +105,7 @@
     veor \a0h, \t0l
     veor \a1l, \t0h
     vmull_p64 \t0qn, \a0hn, \pdn
-    veor \a1l, \t0l
-    veor \a1h, \t0h
+    veor \a1q, \t0q
     veor \rq, \a0q, \a1q
 .endm
 
