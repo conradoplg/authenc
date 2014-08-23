@@ -290,8 +290,6 @@ void ac_gcm_ghash_low(unsigned char *last_y, const dig_t *table, const unsigned 
 		ac_gcm_convert_low(t, input + i);
 		authenc_xor(last_y, last_y, t, AC_GCM_BLOCK_LEN);
 		//binary field multiplication
-        puts("Old Y"); dump(last_y, 16);
 		ac_gcm_mul_low((dig_t *) last_y, (dig_t *) last_y, (dig_t *) table);
-        puts("New Y"); dump(last_y, 16);
 	}
 }
