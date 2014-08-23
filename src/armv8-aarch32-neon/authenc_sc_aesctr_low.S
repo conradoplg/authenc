@@ -36,6 +36,7 @@ _sc_aesctr_enc_low:
     teq r2, #0
 	bxeq lr
     ldr r12, [sp]
+    push {r10,r11}
     vpush {q4-q7}
 #if 1
     //load expanded key
@@ -45,39 +46,40 @@ _sc_aesctr_enc_low:
     //q5 = counter
     //q6 = counter + 1
     vld1.64 {q5}, [r3]
+    vmov.32 r12, d11[1]
+    rev r12, r12
 #endif
 #if 1
     vmov q6, q5
-    vmov.32 r12, d13[1]
-    rev r12, r12
-    add r12, #1
-    rev r12, r12
-    vmov.32 d13[1], r12
+    vmov.32 r3, d13[1]
+    rev r3, r3
+    add r3, #1
+    rev r11, r3
+    vmov.32 d13[1], r11
 #endif
 #if 1
+    cmp r2, #31
+    bls leftover
+
 full_block:
     vmov q0, q5
         vmov q7, q6
     AESE(0, 8)
         AESE(7, 8)
-    vmov.32 r12, d11[1]
-        vmov.32 r3, d13[1]
     AESMC(0, 0)
         AESMC(7, 7)
-    rev r12, r12
-        rev r3, r3
     AESE(0, 9)
         AESE(7, 9)
     add r12, #2
         add r3, #2
     AESMC(0, 0)
         AESMC(7, 7)
-    rev r12, r12
-        rev r3, r3
+    rev r10, r12
+        rev r11, r3
     AESE(0, 10)
         AESE(7, 10)
-    vmov.32 d11[1], r12
-        vmov.32 d13[1], r3
+    vmov.32 d11[1], r10
+        vmov.32 d13[1], r11
     AESMC(0, 0)
         AESMC(7, 7)
     AESE(0, 11)
@@ -126,6 +128,43 @@ full_block:
 
     subs r2, #32
 	bne full_block
+    cmp r2, #0
+    beq finish
+
+    leftover:
+    vmov q0, q5
+    AESE(0, 8)
+    AESMC(0, 0)
+    AESE(0, 9)
+    add r12, #2
+    AESMC(0, 0)
+    rev r10, r12
+    AESE(0, 10)
+    vmov.32 d11[1], r10
+    AESMC(0, 0)
+    AESE(0, 11)
+    AESMC(0, 0)
+    AESE(0, 12)
+    AESMC(0, 0)
+    AESE(0, 13)
+    AESMC(0, 0)
+    AESE(0, 14)
+    AESMC(0, 0)
+    AESE(0, 15)
+    AESMC(0, 0)
+    AESE(0, 1)
+    AESMC(0, 0)
+    AESE(0, 2)
+    veor q0, q3
+    //load input
+    vld1.64 {q4}, [r1]!
+    //encrypt
+    veor q4, q0
+    //store
+    vst1.64 {q4}, [r0]!
+
 #endif
+    finish:
     vpop {q4-q7}
+    pop {r10,r11}
     bx lr
