@@ -1,6 +1,7 @@
 #include "authenc_bc_aes.h"
 
 #include <string.h>
+#include <authenc_bc_aes.h>
 
 #include "authenc_util.h"
 #include "authenc_errors.h"
@@ -200,16 +201,20 @@ static unsigned char select(unsigned char a, unsigned char b, int bit) {
 	unsigned mask = (unsigned) (-bit);
 	return (unsigned char) ((mask & (a ^ b)) ^ a);
 }
-static unsigned char table_choose(const unsigned char *table, size_t table_size, size_t index)
+static uint32_t table_choose(const unsigned char *table, size_t table_size, size_t idx0, size_t idx1, size_t idx2, size_t idx3)
 {
 	size_t i;
-	unsigned char r;
+	unsigned char r0, r1, r2, r3;
 
-	r = table[0];
+	r0 = r1 = r2 = r3 = table[0];
 	for (i = 1; i < table_size; i++) {
-		r = select(r, table[i], cmp_int(i, index));
+		unsigned char ti = table[i];
+		r0 = select(r0, ti, cmp_int(i, idx0));
+		r1 = select(r1, ti, cmp_int(i, idx1));
+		r2 = select(r2, ti, cmp_int(i, idx2));
+		r3 = select(r3, ti, cmp_int(i, idx3));
 	}
-	return r;
+	return r0 | (r1 << 8) | (r2 << 16) | (r3 << 24);
 }
 
 /*============================================================================*/
@@ -231,10 +236,11 @@ errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t len) {
 	//KeyExpansion
 	memcpy(ctx->ekey, key, BC_AES128_KEY_LEN);
 	for (a = 16; a < 11 * 16; ) {
-		t[0] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 3]) ^ rcon;
-		t[1] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 2]);
-		t[2] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 1]);
-		t[3] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 4]);
+		uint32_t y = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 3], ctx->ekey[a - 2], ctx->ekey[a - 1], ctx->ekey[a - 4]);
+		t[0] = (y & 0xFF) ^ rcon;
+		t[1] = (y >> 8) & 0xFF;
+		t[2] = (y >> 16) & 0xFF;
+		t[3] = (y >> 24) & 0xFF;
 		rcon = (rcon << 1) ^ ((rcon >> 7) * 0x11b);
 		for (j = 0; j < 4; j++) {
 			t[0] ^= ctx->ekey[a - 16];
