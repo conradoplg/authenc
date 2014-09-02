@@ -188,6 +188,29 @@ static unsigned char mule[256] = {
 	0xd7, 0xd9, 0xcb, 0xc5, 0xef, 0xe1, 0xf3, 0xfd, 0xa7, 0xa9, 0xbb, 0xb5, 0x9f, 0x91, 0x83, 0x8d
 };
 
+static int cmp_int(size_t a, size_t b) {
+	size_t x = a ^ b;
+	uint32_t y = x;
+	y -= 1;
+	y >>= 31;
+	return y;
+}
+
+static unsigned char select(unsigned char a, unsigned char b, int bit) {
+	unsigned mask = (unsigned) (-bit);
+	return (unsigned char) ((mask & (a ^ b)) ^ a);
+}
+static unsigned char table_choose(const unsigned char *table, size_t table_size, size_t index)
+{
+	size_t i;
+	unsigned char r;
+
+	r = table[0];
+	for (i = 1; i < table_size; i++) {
+		r = select(r, table[i], cmp_int(i, index));
+	}
+	return r;
+}
 
 /*============================================================================*/
 /* Public definitions                                                         */
@@ -208,10 +231,10 @@ errno_t bc_aes_enc_key(bc_aes_ctx_t ctx, const unsigned char *key, size_t len) {
 	//KeyExpansion
 	memcpy(ctx->ekey, key, BC_AES128_KEY_LEN);
 	for (a = 16; a < 11 * 16; ) {
-		t[0] = sbox[ctx->ekey[a - 3]] ^ rcon;
-		t[1] = sbox[ctx->ekey[a - 2]];
-		t[2] = sbox[ctx->ekey[a - 1]];
-		t[3] = sbox[ctx->ekey[a - 4]];
+		t[0] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 3]) ^ rcon;
+		t[1] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 2]);
+		t[2] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 1]);
+		t[3] = table_choose(sbox, sizeof(sbox), ctx->ekey[a - 4]);
 		rcon = (rcon << 1) ^ ((rcon >> 7) * 0x11b);
 		for (j = 0; j < 4; j++) {
 			t[0] ^= ctx->ekey[a - 16];
