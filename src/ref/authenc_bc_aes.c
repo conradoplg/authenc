@@ -197,7 +197,7 @@ static int cmp_int(size_t a, size_t b) {
 	return y;
 }
 
-static unsigned char select(unsigned char a, unsigned char b, int bit) {
+static unsigned char sel_ch(unsigned char a, unsigned char b, int bit) {
 	unsigned mask = (unsigned) (-bit);
 	return (unsigned char) ((mask & (a ^ b)) ^ a);
 }
@@ -209,10 +209,10 @@ static uint32_t table_choose(const unsigned char *table, size_t table_size, size
 	r0 = r1 = r2 = r3 = table[0];
 	for (i = 1; i < table_size; i++) {
 		unsigned char ti = table[i];
-		r0 = select(r0, ti, cmp_int(i, idx0));
-		r1 = select(r1, ti, cmp_int(i, idx1));
-		r2 = select(r2, ti, cmp_int(i, idx2));
-		r3 = select(r3, ti, cmp_int(i, idx3));
+		r0 = sel_ch(r0, ti, cmp_int(i, idx0));
+		r1 = sel_ch(r1, ti, cmp_int(i, idx1));
+		r2 = sel_ch(r2, ti, cmp_int(i, idx2));
+		r3 = sel_ch(r3, ti, cmp_int(i, idx3));
 	}
 	return r0 | (r1 << 8) | (r2 << 16) | (r3 << 24);
 }
