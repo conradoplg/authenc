@@ -21,6 +21,6 @@ Currently there is:
 * ref: naive C-only backend
 * armv7-neon: ARMv7 speed-optimized with NEON; with side-channel resistance. Includes bitsliced AES by Bernstein and Schwabe.
 
-You can skip CMake by simply building all the files in src/*, all the files in src/<backend>/*, and all the files
-in src/ref/* which are listed in src/<backend>/CMakeLists.txt.
+You can skip CMake by simply building all the files in src/, all the files in src/backend/, and all the files
+in src/ref/ which are listed in src/backend/CMakeLists.txt.
 
