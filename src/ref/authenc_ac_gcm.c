@@ -211,19 +211,20 @@ void ac_gcm_enc_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char
 void ac_gcm_dec_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input,
 		size_t input_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
+	const unsigned char *p = input;
 	size_t len;
 
-	sc_aesctr_enc(ctx->bc_ctx, output, input, input_len, ctx->ctr, sizeof(ctx->ctr));
-	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 	len = (input_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
-	ac_gcm_ghash_low(ctx->last_y, ctx->table, input, len);
-	input += len;
+	ac_gcm_ghash_low(ctx->last_y, ctx->table, p, len);
+	p += len;
 	len = input_len % AC_GCM_BLOCK_LEN;
 	if (len) {
-		memcpy(t, input, len);
+		memcpy(t, p, len);
 		memset(t + len, 0, sizeof(t) - len);
 		ac_gcm_ghash_low(ctx->last_y, ctx->table, t, sizeof(t));
 	}
+	sc_aesctr_enc(ctx->bc_ctx, output, input, input_len, ctx->ctr, sizeof(ctx->ctr));
+	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 
 	ctx->len_c += input_len;
 }
