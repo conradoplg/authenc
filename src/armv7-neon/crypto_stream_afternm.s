@@ -44,7 +44,6 @@
 # qhasm: reg128 caller_q7
 
 # qhasm: startcode
-//.fpu neon
 .text
 
 # qhasm: reg128 bb0
@@ -176,7 +175,6 @@ crypto_stream_aes128ctr_neon_afternm_constants:
 vpush {q4,q5,q6,q7}
 mov r12,sp
 sub sp,sp,#320
-//and sp,sp,#0xffffffe0
 bic sp,sp,#0x1f
 
 # qhasm: stack64 stack_r45

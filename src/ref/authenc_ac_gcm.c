@@ -139,8 +139,8 @@ errno_t ac_gcm_key(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_len) {
 	errno_t err = AUTHENC_OK;
 
 	ctx->len_a = ctx->len_c = 0;
-
 	memset(ctx->last_y, 0, AC_GCM_BLOCK_LEN);
+
 	err = sc_aesctr_key(ctx->bc_ctx, key, key_len);
 	if (err != AUTHENC_OK) {
 		return err;
@@ -162,6 +162,8 @@ errno_t ac_gcm_init_low(ac_gcm_ctx_t ctx, const unsigned char *key, size_t key_l
 	(void) key_len;
 	(void) msg_len;
 	(void) data_len;
+	ctx->len_a = ctx->len_c = 0;
+	memset(ctx->last_y, 0, AC_GCM_BLOCK_LEN);
 	//J_0 = IV || 0^31 || 1
 	memcpy(ctx->ctr, iv, AC_GCM_IV_LEN);
 	memset(ctx->ctr + AC_GCM_IV_LEN, 0, AC_GCM_BLOCK_LEN - AC_GCM_IV_LEN);
@@ -209,19 +211,20 @@ void ac_gcm_enc_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char
 void ac_gcm_dec_low(ac_gcm_ctx_t ctx, unsigned char *output, const unsigned char *input,
 		size_t input_len) {
 	authenc_align unsigned char t[AC_GCM_BLOCK_LEN];
+	const unsigned char *p = input;
 	size_t len;
 
-	sc_aesctr_enc(ctx->bc_ctx, output, input, input_len, ctx->ctr, sizeof(ctx->ctr));
-	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 	len = (input_len / AC_GCM_BLOCK_LEN) * AC_GCM_BLOCK_LEN;
-	ac_gcm_ghash_low(ctx->last_y, ctx->table, input, len);
-	input += len;
+	ac_gcm_ghash_low(ctx->last_y, ctx->table, p, len);
+	p += len;
 	len = input_len % AC_GCM_BLOCK_LEN;
 	if (len) {
-		memcpy(t, input, len);
+		memcpy(t, p, len);
 		memset(t + len, 0, sizeof(t) - len);
 		ac_gcm_ghash_low(ctx->last_y, ctx->table, t, sizeof(t));
 	}
+	sc_aesctr_enc(ctx->bc_ctx, output, input, input_len, ctx->ctr, sizeof(ctx->ctr));
+	authenc_inc32(ctx->ctr, input_len / AC_GCM_BLOCK_LEN, AC_GCM_BLOCK_LEN);
 
 	ctx->len_c += input_len;
 }

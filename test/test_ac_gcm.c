@@ -207,24 +207,39 @@ static errno_t test_ac(void) {
 	return err;
 }
 
-int crypto_secretbox(unsigned char *c, const unsigned char *m, unsigned long long mlen,
-		const unsigned char *n, const unsigned char *k);
-int crypto_secretbox_open(unsigned char *m, const unsigned char *c, unsigned long long clen,
-		const unsigned char *n, const unsigned char *k);
+int crypto_aead_encrypt(
+		unsigned char *c,unsigned long long *clen,
+		const unsigned char *m,unsigned long long mlen,
+		const unsigned char *ad,unsigned long long adlen,
+		const unsigned char *nsec,
+		const unsigned char *npub,
+		const unsigned char *k
+);
+int crypto_aead_decrypt(
+		unsigned char *m,unsigned long long *mlen,
+		unsigned char *nsec,
+		const unsigned char *c,unsigned long long clen,
+		const unsigned char *ad,unsigned long long adlen,
+		const unsigned char *npub,
+		const unsigned char *k
+);
 
 errno_t test_supercop(void) {
 	errno_t err = AUTHENC_OK;
 	unsigned char key[SC_AES128CTR_KEY_LEN] = { 0 };
 	unsigned char iv[AC_GCM_IV_LEN] = { 0 };
-	authenc_align unsigned char msg[3 * AC_GCM_BLOCK_LEN + 1] = { 0 };
-	authenc_align unsigned char cipher[3 * AC_GCM_BLOCK_LEN + 1] = { 0 };
-	authenc_align unsigned char computed_msg[3 * AC_GCM_BLOCK_LEN + 1] = { 0 };
+	authenc_align unsigned char msg[3 * AC_GCM_BLOCK_LEN] = { 0 };
+	authenc_align unsigned char cipher[4 * AC_GCM_BLOCK_LEN] = { 0 };
+	authenc_align unsigned char computed_msg[3 * AC_GCM_BLOCK_LEN] = { 0 };
 	int r;
+	unsigned long long clen = sizeof(cipher);
+	unsigned long long mlen = sizeof(computed_msg);
 
-	r = crypto_secretbox(cipher, msg, sizeof(msg), iv, key);
+	r = crypto_aead_encrypt(cipher, &clen, msg, sizeof(msg), NULL, 0, NULL, iv, key);
 	assert(r == 0);
-	r = crypto_secretbox_open(computed_msg, cipher, sizeof(cipher), iv, key);
+	r = crypto_aead_decrypt(computed_msg, &mlen, NULL, cipher, clen, NULL, 0, iv, key);
 	assert(r == 0);
+	assert(mlen == sizeof(msg));
 	assert(memcmp(msg, computed_msg, sizeof(msg)) == 0);
 
 	return err;

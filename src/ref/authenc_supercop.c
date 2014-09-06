@@ -1,57 +1,63 @@
 #include <stdio.h>
 
-//#include "crypto_secretbox.h"
+#ifdef SUPERCOP
+#include "crypto_aead.h"
+#endif
 #include "api.h"
 #include "authenc_ac_gcm.h"
 #include "authenc_errors.h"
 
-
-int crypto_secretbox(unsigned char *c, const unsigned char *m,
-		unsigned long long mlen, const unsigned char *n, const unsigned char *k)
+int crypto_aead_encrypt(
+		unsigned char *c,unsigned long long *clen,
+		const unsigned char *m,unsigned long long mlen,
+		const unsigned char *ad,unsigned long long adlen,
+		const unsigned char *nsec,
+		const unsigned char *npub,
+		const unsigned char *k
+)
 {
 	errno_t err = AUTHENC_OK;
 	ac_gcm_ctx_at ctx;
-	size_t clen;
+	size_t clen_aux;
+	(void) nsec;
 
-	if (mlen < crypto_secretbox_aes128gcm_ref_ZEROBYTES) {
-		return -1;
-	}
-	err = ac_gcm_key(ctx, k, crypto_secretbox_aes128gcm_ref_KEYBYTES);
+	err = ac_gcm_key(ctx, k, CRYPTO_KEYBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	err = ac_gcm_enc(ctx, c, &clen, mlen,
-			m + crypto_secretbox_aes128gcm_ref_ZEROBYTES, mlen - crypto_secretbox_aes128gcm_ref_ZEROBYTES,
-			NULL, 0, n, crypto_secretbox_aes128gcm_ref_NONCEBYTES);
+	*clen = mlen + CRYPTO_ABYTES;
+	err = ac_gcm_enc(ctx, c, &clen_aux, mlen + CRYPTO_ABYTES, m, mlen, ad, adlen, npub, CRYPTO_NPUBBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
+	*clen = clen_aux;
 
 	return 0;
 }
 
-int crypto_secretbox_open(unsigned char *m, const unsigned char *c,
-		unsigned long long clen, const unsigned char *n, const unsigned char *k)
+int crypto_aead_decrypt(
+		unsigned char *m,unsigned long long *mlen,
+		unsigned char *nsec,
+		const unsigned char *c,unsigned long long clen,
+		const unsigned char *ad,unsigned long long adlen,
+		const unsigned char *npub,
+		const unsigned char *k
+)
 {
 	errno_t err = AUTHENC_OK;
 	ac_gcm_ctx_at ctx;
-	unsigned long long i;
-	size_t mlen;
+	size_t mlen_aux;
+	(void) nsec;
 
-	if (clen < crypto_secretbox_aes128gcm_ref_ZEROBYTES) {
-		return -1;
-	}
-	err = ac_gcm_key(ctx, k, crypto_secretbox_aes128gcm_ref_KEYBYTES);
+	err = ac_gcm_key(ctx, k, CRYPTO_KEYBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	err = ac_gcm_dec(ctx, m + crypto_secretbox_aes128gcm_ref_ZEROBYTES, &mlen, clen - crypto_secretbox_aes128gcm_ref_ZEROBYTES,
-			c, clen, NULL, 0, n, crypto_secretbox_aes128gcm_ref_NONCEBYTES);
+	*mlen = clen - CRYPTO_ABYTES;
+	err = ac_gcm_dec(ctx, m, &mlen_aux, clen - CRYPTO_ABYTES, c, clen, ad, adlen, npub, CRYPTO_NPUBBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	for (i = 0; i < crypto_secretbox_aes128gcm_ref_ZEROBYTES; i++) {
-		m[i] = 0;
-	}
+	*mlen = mlen_aux;
 	return 0;
 }
