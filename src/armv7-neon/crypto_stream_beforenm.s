@@ -44,7 +44,6 @@
 # qhasm: reg128 caller_q7
 
 # qhasm: startcode
-//.fpu neon
 .text
 
 # qhasm: reg128 xmm0
@@ -126,7 +125,6 @@ crypto_stream_aes128ctr_neon_beforenm:
 vpush {q4,q5,q6,q7}
 mov r12,sp
 sub sp,sp,#0
-//and sp,sp,#0xffffffe0
 bic sp,sp,#0x1f
 
 # qhasm:   xmm0 = mem128[input_1]
