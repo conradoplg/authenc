@@ -1,6 +1,8 @@
 #include <stdio.h>
 
-//#include "crypto_aead.h"
+#ifdef SUPERCOP
+#include "crypto_aead.h"
+#endif
 #include "api.h"
 #include "authenc_ac_gcm.h"
 #include "authenc_errors.h"
@@ -16,18 +18,19 @@ int crypto_aead_encrypt(
 {
 	errno_t err = AUTHENC_OK;
 	ac_gcm_ctx_at ctx;
-	//TODO: check overflow
-	size_t clen_aux = *clen;
+	size_t clen_aux;
 	(void) nsec;
 
 	err = ac_gcm_key(ctx, k, CRYPTO_KEYBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	err = ac_gcm_enc(ctx, c, &clen_aux, clen_aux, m, mlen, ad, adlen, npub, CRYPTO_NPUBBYTES);
+	*clen = mlen + CRYPTO_ABYTES;
+	err = ac_gcm_enc(ctx, c, &clen_aux, mlen + CRYPTO_ABYTES, m, mlen, ad, adlen, npub, CRYPTO_NPUBBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
+	*clen = clen_aux;
 
 	return 0;
 }
@@ -43,17 +46,18 @@ int crypto_aead_decrypt(
 {
 	errno_t err = AUTHENC_OK;
 	ac_gcm_ctx_at ctx;
-	//TODO: check overflow
-	size_t mlen_aux = *mlen;
+	size_t mlen_aux;
 	(void) nsec;
 
 	err = ac_gcm_key(ctx, k, CRYPTO_KEYBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
-	err = ac_gcm_dec(ctx, m, &mlen_aux, mlen_aux, c, clen, ad, adlen, npub, CRYPTO_NPUBBYTES);
+	*mlen = clen - CRYPTO_ABYTES;
+	err = ac_gcm_dec(ctx, m, &mlen_aux, clen - CRYPTO_ABYTES, c, clen, ad, adlen, npub, CRYPTO_NPUBBYTES);
 	if (err != AUTHENC_OK) {
 		return -1;
 	}
+	*mlen = mlen_aux;
 	return 0;
 }
