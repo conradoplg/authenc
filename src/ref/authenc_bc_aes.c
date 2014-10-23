@@ -1,7 +1,6 @@
 #include "authenc_bc_aes.h"
 
 #include <string.h>
-#include <authenc_bc_aes.h>
 
 #include "authenc_util.h"
 #include "authenc_errors.h"
