@@ -41,7 +41,7 @@
 #define CYCLE 5
 #define MACH 6
 
-#define TIMER MACH
+#define TIMER HTHRD
 
 /*============================================================================*/
 /* Private definitions                                                        */

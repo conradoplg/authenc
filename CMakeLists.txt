@@ -28,6 +28,6 @@ target_link_libraries(test_ac_gcm authenc)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bench/authenc_bench.c")
 	add_executable(bench_ac_gcm bench/bench_ac_gcm.c bench/authenc_bench.c)
-	target_link_libraries(bench_ac_gcm authenc rt)
+	target_link_libraries(bench_ac_gcm authenc)
 endif()
 

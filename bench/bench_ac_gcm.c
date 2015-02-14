@@ -1,3 +1,8 @@
+#ifdef AUTHENC_BENCH_CORE
+#define _GNU_SOURCE
+#include <sched.h>
+#endif
+
 #include <stdio.h>
 #include <assert.h>
 
@@ -17,8 +22,6 @@ static void dummy(void)
         ;
 }
 
-static void dump(const void *p, size_t len) { const unsigned char *a = p; size_t i; for (i = 0; i < len; i++) { printf("%02X", a[i]); } puts(""); }
-
 static void bench_authenticated_encryption(void) {
 	unsigned char key[SC_AES128CTR_KEY_LEN] = { 0 };
 	unsigned char iv[AC_GCM_IV_LEN] = { 0 };
@@ -27,6 +30,8 @@ static void bench_authenticated_encryption(void) {
 	ac_gcm_ctx_at ctx;
 	size_t k, msg_len, cipher_len;
     errno_t err;
+
+    (void) err;
 
 	for (k = 0; k < sizeof(SIZES) / sizeof(int); k++) {
 #undef BENCH
@@ -134,8 +139,23 @@ int bench_ac_gcm(void) {
 
 	return 0;
 }
-#if 0
+
 int main(void) {
+#ifdef AUTHENC_BENCH_CORE
+	cpu_set_t mask;
+	int r;
+	volatile int x;
+	/* On some devices (tested on Galaxy Note 4), all cores except the first are offline and only become online
+	 * when required. We force some CPU usage in order to turn them all on. Without this the sched_setaffinity fails.
+	 */
+	for (x = 0; x < 100000000; x++);
+	CPU_ZERO(&mask);
+	CPU_SET(AUTHENC_BENCH_CORE, &mask);
+	r = sched_setaffinity(0, sizeof(mask), &mask);
+	if (r != 0) {
+		puts("Error in sched_setaffinity");
+		perror(NULL);
+	}
+#endif
     return bench_ac_gcm();
 }
-#endif
