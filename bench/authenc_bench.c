@@ -189,7 +189,7 @@ void bench_compute(int benches) {
     
     elapsedTime = total;
     elapsedTimeNano = elapsedTime * timeBaseInfo.numer / timeBaseInfo.denom;
-    total = (unsigned long long) (((double) elapsedTimeNano) * 1.3);
+    total = (unsigned long long) (((double) elapsedTimeNano));
 #endif
 #if TIMER != NONE
 	total = total / benches - overhead;
